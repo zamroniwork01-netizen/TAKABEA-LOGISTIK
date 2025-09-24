@@ -1,0 +1,2535 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Logistik & Gudang (Lokal)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background-color: #020617; /* slate-950 */
+            color: #e2e8f0; /* slate-200 */
+        }
+        .sidebar {
+            width: 250px;
+            left: 0;
+            transform: translateX(-100%);
+            z-index: 50;
+            background-color: #111827; /* gray-900 */
+            border-right: 1px solid #1f2937; /* gray-800 */
+            transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .nav-btn.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.25);
+        }
+        .nav-btn.active svg, .nav-btn.active span {
+            color: white;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+                position: relative;
+            }
+            .sidebar.is-collapsed {
+                width: 80px;
+            }
+            .sidebar.is-collapsed .nav-text,
+            .sidebar.is-collapsed #app-logo-text,
+            .sidebar.is-collapsed #storage-mode-container {
+                display: none;
+            }
+            .sidebar.is-collapsed .nav-btn {
+                justify-content: center;
+            }
+            .sidebar.is-collapsed #app-logo {
+                justify-content: center;
+            }
+             .sidebar.is-collapsed #collapse-sidebar-btn svg {
+                transform: rotate(180deg);
+            }
+        }
+         /* Custom Scrollbar for Dark Mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; /* slate-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; /* slate-600 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7); /* slate-900 with opacity */
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5); /* slate-700 with opacity */
+        }
+        .input-dark {
+            background-color: #1e293b; /* slate-800 */
+            border-color: #334155; /* slate-700 */
+            color: #e2e8f0; /* slate-200 */
+        }
+        .input-dark:focus {
+            --tw-ring-color: #38bdf8; /* sky-400 */
+            border-color: #38bdf8;
+        }
+        .input-dark::placeholder {
+            color: #64748b; /* slate-500 */
+        }
+        .btn-primary {
+            background-color: #e2e8f0;
+            color: #0f172a;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background-color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(226, 232, 240, 0.2);
+        }
+        .btn-secondary {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+        }
+         .btn-secondary:hover {
+            background-color: #334155;
+            border-color: #475569;
+        }
+        .tab-btn.active {
+            border-color: #38bdf8;
+            background-color: #1e293b;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+<body class="flex flex-row">
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar p-4 fixed md:relative h-full flex flex-col shadow-2xl">
+        <div>
+            <div id="app-logo" class="flex items-center justify-start space-x-3 px-2 mb-10">
+                <svg class="w-8 h-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+                </svg>
+                <div id="app-logo-text">
+                     <h1 class="text-2xl font-bold text-white">Logistik</h1>
+                     <p class="text-xs text-slate-400">takabea trisaco</p>
+                </div>
+                <button id="close-sidebar-btn" class="text-slate-400 hover:text-white md:hidden ml-auto">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <nav class="flex flex-col space-y-2">
+                <button id="nav-dashboard" class="nav-btn flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-300 hover:bg-gray-700 hover:text-white transition-colors text-left active">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                    <span class="nav-text">Dashboard</span>
+                </button>
+                <button id="nav-gudang" class="nav-btn flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-300 hover:bg-gray-700 hover:text-white transition-colors text-left">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M.99 5.24A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5zm1.26.51v9.5a.75.75 0 0 0 .75.75h13.5a.75.75 0 0 0 .75-.75v-9.5a.75.75 0 0 0-.75-.75H3.25a.75.75 0 0 0-.75.75zM4 8a1 1 0 0 1 1-1h1a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1zm3 0a1 1 0 0 1 1-1h1a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1zm4-1a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2h-1z" clip-rule="evenodd"/></svg>
+                    <span class="nav-text">Gudang</span>
+                </button>
+                <button id="nav-distribusi" class="nav-btn flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-300 hover:bg-gray-700 hover:text-white transition-colors text-left">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" /><path fill-rule="evenodd" d="M1.138 4.21A2 2 0 013 3h8a2 2 0 012 2v6a2 2 0 01-2 2H4.236a2 2 0 01-1.938-2.414L3.138 6.21A2 2 0 011.138 4.21zM14 5a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1V6a1 1 0 00-1-1h-2z" clip-rule="evenodd" /></svg>
+                    <span class="nav-text">Distribusi</span>
+                </button>
+                <button id="nav-kembali" class="nav-btn flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-300 hover:bg-gray-700 hover:text-white transition-colors text-left">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 10.707V17.5a1.5 1.5 0 0 1-1.5-1.5h-2.5a1 1 0 0 1-1-1v-4.828a1 1 0 0 0-1.707-.707L8 14.293V17a1 1 0 0 1-1 1H4.5a1.5 1.5 0 0 1-1.5-1.5v-6.793a1 1 0 0 1 .293-.707l7-7z" clip-rule="evenodd"/></svg>
+                    <span class="nav-text">Pengembalian</span>
+                </button>
+                 <button id="nav-upah" class="nav-btn flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-300 hover:bg-gray-700 hover:text-white transition-colors text-left">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 11a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1v-1z" /></svg>
+                    <span class="nav-text">Upah Kerja</span>
+                </button>
+                <button id="nav-laporan" class="nav-btn flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-300 hover:bg-gray-700 hover:text-white transition-colors text-left">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H4zm0-1h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M7 6.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-.5 3.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z"/></svg>
+                    <span class="nav-text">Laporan</span>
+                </button>
+            </nav>
+        </div>
+        <div class="mt-auto flex-shrink-0 space-y-4">
+            <div id="storage-mode-container" class="text-xs text-slate-400 p-2 rounded-lg bg-gray-800">
+                <span class="font-medium text-slate-300">Mode Penyimpanan:</span>
+                <span class="block font-mono mt-1 truncate">Lokal</span>
+            </div>
+            <button id="collapse-sidebar-btn" class="nav-btn w-full hidden md:flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-slate-400 hover:bg-gray-700 hover:text-white transition-colors text-left">
+                <svg class="w-5 h-5 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+                </svg>
+                <span class="nav-text">Ciutkan</span>
+            </button>
+        </div>
+    </div>
+     <!-- Backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"></div>
+    <!-- Main Content -->
+    <div id="main-content" class="content flex-1 p-4 md:p-8 relative">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="absolute inset-0 bg-slate-950/70 flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-slate-400 mx-auto"></div>
+                <p class="mt-4 text-lg text-slate-300">Memuat Aplikasi...</p>
+            </div>
+        </div>
+
+        <button id="open-sidebar-btn" class="fixed top-4 left-4 p-2 rounded-full bg-slate-900 text-white shadow-lg z-40 md:hidden">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+
+        <!-- Project Selection View (Initial Page) -->
+        <div id="view-proyek" class="app-view w-full max-w-4xl mx-auto p-8 glass-card rounded-2xl">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-extrabold text-white">Selamat Datang</h1>
+                <p class="text-slate-400 mt-2 text-lg">Silakan pilih proyek untuk melanjutkan.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Tambah Proyek Baru -->
+                <div class="glass-card p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-bold text-white">Tambah Proyek Baru</h2>
+                    <input type="text" id="new-project-name" placeholder="Nama Proyek" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                    <button id="add-project-btn" class="w-full py-2.5 rounded-lg font-semibold btn-primary">Buat Proyek</button>
+                </div>
+
+                <!-- Pilih Proyek -->
+                <div class="glass-card p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-bold text-white">Pilih Proyek</h2>
+                    <div id="project-selection-list" class="max-h-64 overflow-y-auto space-y-3 pr-2">
+                        <p class="text-sm italic text-slate-500">Memuat proyek...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Container (Hidden initially) -->
+        <div id="app-container" class="w-full max-w-6xl mx-auto hidden">
+            <div class="space-y-8">
+                 <div class="p-8 glass-card rounded-2xl">
+                    <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                        <h1 class="text-4xl font-extrabold text-white">
+                            <span id="current-project-name"></span>
+                        </h1>
+                        <button id="exit-project-btn" class="px-5 py-2.5 rounded-lg font-semibold btn-secondary self-start md:self-center">
+                            Keluar Proyek
+                        </button>
+                    </div>
+
+                    <!-- Dashboard View -->
+                    <div id="view-dashboard" class="app-view">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="p-6 glass-card rounded-xl">
+                                <h2 class="text-2xl font-bold text-white mb-4">Ringkasan</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <h3 class="font-bold text-slate-400">Jumlah Jenis Material di Gudang:</h3>
+                                        <p id="total-materials" class="text-3xl font-bold text-white">0</p>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-400">Kavling Proyek:</h3>
+                                        <ul id="kavling-list" class="text-slate-300 space-y-2 mt-2"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-6 glass-card rounded-xl space-y-4">
+                                <h2 class="text-2xl font-bold text-white mb-4">Tambah Kavling Baru</h2>
+                                <input type="text" id="new-kavling-name" placeholder="Nama Kavling (e.g., C1, D2)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                <input type="text" id="new-kavling-mandor" placeholder="Nama Mandor" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                <input type="text" id="new-kavling-pelaksana" placeholder="Nama Pelaksana Lapangan" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                <button id="add-kavling-btn" class="w-full py-2.5 rounded-lg font-semibold btn-primary">Tambahkan Kavling</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gudang (Warehouse) View -->
+                    <div id="view-gudang" class="app-view hidden">
+                        <h2 class="text-2xl font-bold text-white mb-6">Manajemen Gudang</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="glass-card p-6 rounded-xl space-y-4">
+                                <h3 class="text-xl font-bold text-white">Tambah Material Baru</h3>
+                                <input type="text" id="new-material-name" placeholder="Nama Material" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                <input type="number" id="new-material-stock" placeholder="Stok Awal" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                <button id="add-material-btn" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md">Tambah Material</button>
+                            </div>
+                            <div class="glass-card p-6 rounded-xl space-y-4">
+                                <h3 class="text-xl font-bold text-white">Daftar Material Gudang</h3>
+                                <div id="material-list-container" class="max-h-80 overflow-y-auto space-y-3 pr-2">
+                                    <p id="no-materials" class="text-sm italic text-slate-500">Tidak ada material di gudang.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribusi (Distribution) View -->
+                    <div id="view-distribusi" class="app-view hidden">
+                        <h2 class="text-2xl font-bold text-white mb-6">Pendistribusian Material</h2>
+                        <div class="glass-card p-8 rounded-xl space-y-8">
+                            <!-- Distribusi dari Gudang -->
+                            <div class="space-y-4">
+                                <h3 class="text-xl font-bold text-white">Distribusi dari Gudang</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                                    <div>
+                                        <label for="dist-material-select" class="block text-slate-400 font-medium mb-1">Pilih Material</label>
+                                        <select id="dist-material-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                            <option value="" disabled selected>Pilih Material</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="dist-kavling-select" class="block text-slate-400 font-medium mb-1">Pilih Kavling</label>
+                                        <select id="dist-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                            <option value="" disabled selected>Pilih Kavling</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="dist-date" class="block text-slate-400 font-medium mb-1">Tanggal Distribusi</label>
+                                        <input type="date" id="dist-date" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <div>
+                                        <label for="dist-quantity" class="block text-slate-400 font-medium mb-1">Jumlah</label>
+                                        <input type="number" id="dist-quantity" placeholder="Jumlah" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <div>
+                                        <label for="dist-price" class="block text-slate-400 font-medium mb-1">Harga Satuan</label>
+                                        <input type="number" id="dist-price" placeholder="Harga Satuan (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <button id="distribute-btn" class="w-full py-2.5 rounded-lg font-semibold btn-primary">Distribusi</button>
+                                </div>
+                            </div>
+
+                            <!-- Distribusi Langsung ke Kavling -->
+                            <div class="space-y-4 border-t border-slate-700 pt-8">
+                                <h3 class="text-xl font-bold text-white">Distribusi Langsung ke Kavling</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                                     <div>
+                                        <label for="direct-material-name" class="block text-slate-400 font-medium mb-1">Nama Material</label>
+                                        <input type="text" id="direct-material-name" placeholder="Nama Material" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <div>
+                                        <label for="direct-kavling-select" class="block text-slate-400 font-medium mb-1">Pilih Kavling</label>
+                                        <select id="direct-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                            <option value="" disabled selected>Pilih Kavling</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="direct-date" class="block text-slate-400 font-medium mb-1">Tanggal Distribusi</label>
+                                        <input type="date" id="direct-date" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <div>
+                                        <label for="direct-quantity" class="block text-slate-400 font-medium mb-1">Jumlah</label>
+                                        <input type="number" id="direct-quantity" placeholder="Jumlah" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <div>
+                                        <label for="direct-price" class="block text-slate-400 font-medium mb-1">Harga Satuan</label>
+                                        <input type="number" id="direct-price" placeholder="Harga Satuan (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    </div>
+                                    <button id="direct-distribute-btn" class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-semibold hover:bg-sky-600 transition-colors shadow-md">Distribusi Langsung</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pengembalian (Return) View -->
+                    <div id="view-kembali" class="app-view hidden">
+                        <h2 class="text-2xl font-bold text-white mb-6">Pengembalian Material ke Gudang</h2>
+                        <div class="glass-card p-8 rounded-xl space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="return-kavling-select" class="block text-slate-400 font-medium mb-1">Pilih Kavling Asal</label>
+                                    <select id="return-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                        <option value="" disabled selected>Pilih Kavling</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="return-material-select" class="block text-slate-400 font-medium mb-1">Material yang Dikembalikan</label>
+                                    <select id="return-material-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2" disabled>
+                                        <option value="" disabled selected>Pilih kavling dulu</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex items-end gap-4">
+                                <div class="flex-1">
+                                    <label for="return-quantity" class="block text-slate-400 font-medium mb-1">Jumlah</label>
+                                    <input type="number" id="return-quantity" placeholder="Jumlah" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                </div>
+                                <button id="return-material-btn" class="w-full md:w-auto bg-sky-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-sky-600 transition-colors shadow-md">Kembalikan ke Gudang</button>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <!-- Upah Kerja View -->
+                    <div id="view-upah" class="app-view hidden space-y-8">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-white">Manajemen Upah Kerja</h2>
+                            <button id="open-add-wage-modal-btn" class="bg-sky-500 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-sky-600 transition-colors shadow-md">
+                                Tambah/Kelola Data Upah
+                            </button>
+                        </div>
+                        
+                        <!-- Summary Section -->
+                        <div class="glass-card p-8 rounded-xl">
+                            <h3 class="text-xl font-bold text-white">Ringkasan & Detail Upah per Kavling</h3>
+                            <div id="wage-summary-container" class="max-h-[50rem] overflow-y-auto space-y-6 pr-3 mt-4">
+                                <p id="no-kavling-summary" class="text-sm italic text-slate-500">Belum ada kavling untuk menampilkan ringkasan.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Laporan (Reports) View -->
+                    <div id="view-laporan" class="app-view hidden">
+                        <h2 class="text-2xl font-bold text-white mb-6">Laporan Biaya</h2>
+                        <div class="glass-card p-8 rounded-xl space-y-4">
+                            <div>
+                                <label for="report-kavling-select" class="block text-slate-400 font-medium mb-1">Pilih Jenis Laporan</label>
+                                <select id="report-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                                    <option value="" disabled selected>Pilih Laporan</option>
+                                </select>
+                            </div>
+                            <div id="report-details" class="space-y-4 hidden">
+                                <div class="flex justify-between items-center">
+                                    <h3 id="report-title" class="text-xl font-semibold text-white">Detail Laporan</h3>
+                                    <div class="flex space-x-2">
+                                         <button id="download-csv-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md text-sm">Unduh CSV</button>
+                                         <button id="download-pdf-rekap-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-md text-sm">PDF (Rekap)</button>
+                                         <button id="download-pdf-rincian-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md text-sm">PDF (Rincian)</button>
+                                    </div>
+                                </div>
+                                <div id="report-table-container" class="overflow-x-auto mt-4">
+                                    <table id="report-table" class="min-w-full bg-slate-800 rounded-lg">
+                                        <thead class="bg-slate-900">
+                                            <tr>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-slate-300">Keterangan</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-slate-300">Jumlah Net</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-slate-300">Harga Rata-rata</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-slate-300">Total Biaya</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="report-body">
+                                            <!-- Detail laporan akan dimuat di sini -->
+                                        </tbody>
+                                        <tfoot id="report-footer">
+                                            <tr class="border-t-2 border-slate-700 font-bold">
+                                                <td colspan="3" class="py-2 px-4 text-right text-sm">Total Biaya Material:</td>
+                                                <td id="report-total-material-cost" class="py-2 px-4 text-left text-sm text-slate-200">Rp0</td>
+                                            </tr>
+                                            <tr class="font-bold">
+                                                <td colspan="3" class="py-2 px-4 text-right text-sm">Total Biaya Upah:</td>
+                                                <td id="report-total-upah-cost" class="py-2 px-4 text-left text-sm text-slate-200">Rp0</td>
+                                            </tr>
+                                            <tr class="border-t-2 border-slate-600 font-bold bg-slate-900">
+                                                <td colspan="3" class="py-3 px-4 text-right text-base text-slate-300">GRAND TOTAL:</td>
+                                                <td id="report-grand-total-cost" class="py-3 px-4 text-left text-base text-white">Rp0</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Manage Wage Data Modal -->
+    <div id="add-wage-data-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden px-4 py-8">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-5xl max-h-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-white">Tambah/Kelola Data Upah</h3>
+                <button id="close-wage-modal-btn" class="text-slate-400 hover:text-white p-1">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex-shrink-0 border-b border-slate-700">
+                <div class="flex space-x-1">
+                    <button class="wage-tab-btn px-4 py-3 font-semibold border-b-2 transition-colors duration-200 text-slate-400 border-transparent hover:text-white active" data-tab="weekly">Kontrak Utama</button>
+                    <button class="wage-tab-btn px-4 py-3 font-semibold border-b-2 transition-colors duration-200 text-slate-400 border-transparent hover:text-white" data-tab="addendum">Addendum</button>
+                    <button class="wage-tab-btn px-4 py-3 font-semibold border-b-2 transition-colors duration-200 text-slate-400 border-transparent hover:text-white" data-tab="subkont">Subkontraktor</button>
+                </div>
+            </div>
+
+            <div class="flex-grow overflow-y-auto pt-6 pr-2">
+                <!-- Kontrak Utama & Upah Mingguan -->
+                <div id="wage-tab-content-weekly" class="wage-tab-content space-y-6">
+                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="space-y-4 p-6 bg-slate-900/50 rounded-lg">
+                            <h4 class="font-semibold text-slate-300">1. Atur Kontrak Pembangunan</h4>
+                            <select id="contract-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2"></select>
+                            <input type="number" id="contract-value-input" placeholder="Nilai Kontrak Awal (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <button id="save-contract-value-btn" class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-semibold hover:bg-sky-600 transition-colors shadow-md">Simpan Kontrak</button>
+                        </div>
+                        <div class="space-y-4 p-6 bg-slate-900/50 rounded-lg">
+                            <h4 class="font-semibold text-slate-300">2. Catat Upah Kerja Mingguan</h4>
+                            <select id="weekly-wage-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2"></select>
+                            <input type="number" id="weekly-wage-week-input" placeholder="Minggu ke-" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="text" id="weekly-wage-desc-input" placeholder="Keterangan (misal: Galian, Pasang Bata)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="number" id="weekly-wage-amount-input" placeholder="Jumlah Serapan (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="date" id="weekly-wage-date-input" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <button id="add-weekly-wage-btn" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md">Catat Pembayaran</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Addendum -->
+                <div id="wage-tab-content-addendum" class="wage-tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="space-y-4 p-6 bg-slate-900/50 rounded-lg">
+                            <h4 class="font-semibold text-slate-300">1. Tambah Item Pekerjaan Addendum</h4>
+                            <select id="addendum-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2"></select>
+                            <input type="text" id="addendum-desc-input" placeholder="Deskripsi Pekerjaan Tambahan" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="number" id="addendum-amount-input" placeholder="Total Biaya Pekerjaan (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="date" id="addendum-date-input" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <button id="add-addendum-btn" class="w-full bg-yellow-500 text-slate-900 py-2.5 rounded-lg font-semibold hover:bg-yellow-400 transition-colors shadow-md">Tambah Item Addendum</button>
+                        </div>
+                        <div class="space-y-4 p-6 bg-slate-900/50 rounded-lg">
+                            <h4 class="font-semibold text-slate-300">2. Catat Pembayaran Addendum</h4>
+                            <select id="addendum-payment-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2"></select>
+                            <select id="addendum-payment-item-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2" disabled><option>Pilih kavling dulu</option></select>
+                            <input type="text" id="addendum-payment-desc-input" placeholder="Keterangan Pembayaran (opsional)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="number" id="addendum-payment-amount-input" placeholder="Jumlah Pembayaran (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="date" id="addendum-payment-date-input" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <button id="add-addendum-payment-btn" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md">Catat Pembayaran</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Subkontraktor -->
+                <div id="wage-tab-content-subkont" class="wage-tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="space-y-4 p-6 bg-slate-900/50 rounded-lg">
+                            <h4 class="font-semibold text-slate-300">1. Tambah Item Pekerjaan Subkont</h4>
+                            <select id="subkont-contract-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2"></select>
+                            <input type="text" id="subkont-contract-desc-input" placeholder="Nama Pekerjaan (misal: Upah Aluminium)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="number" id="subkont-contract-value-input" placeholder="Nilai Kontrak Subkont (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <input type="date" id="subkont-contract-date-input" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                            <button id="save-subkont-contract-btn" class="w-full bg-indigo-500 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-600 transition-colors shadow-md">Tambah Item Subkont</button>
+                        </div>
+                        <div class="space-y-4 p-6 bg-slate-900/50 rounded-lg">
+                            <h4 class="font-semibold text-slate-300">2. Catat Pembayaran Subkont</h4>
+                             <select id="subkont-payment-kavling-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2"></select>
+                             <select id="subkont-payment-item-select" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2" disabled><option>Pilih kavling dulu</option></select>
+                             <input type="text" id="subkont-payment-desc-input" placeholder="Keterangan (misal: Kasbon ke-1)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                             <input type="number" id="subkont-payment-amount-input" placeholder="Jumlah Biaya (Rp)" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                             <input type="date" id="subkont-payment-date-input" class="w-full px-4 py-2 input-dark rounded-lg focus:outline-none focus:ring-2">
+                             <button id="add-subkont-payment-btn" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md">Catat Pembayaran</button>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Confirmation Modal UI -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden px-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-sm">
+            <h3 id="confirmation-modal-title" class="text-xl font-bold mb-3 text-white"></h3>
+            <p id="confirmation-modal-message" class="text-slate-300 mb-6"></p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirmation-modal-cancel-btn" class="px-6 py-2 btn-secondary rounded-lg font-semibold">Batal</button>
+                <button id="confirmation-modal-confirm-btn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold shadow-md">Hapus</button>
+            </div>
+        </div>
+    </div>
+     <!-- Edit Wage Modal -->
+     <div id="edit-wage-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden px-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-md space-y-4">
+            <h3 id="edit-wage-modal-title" class="text-xl font-bold text-white">Edit Data</h3>
+            <input type="hidden" id="edit-wage-id">
+            <input type="hidden" id="edit-wage-type">
+            <div>
+                <label class="block text-slate-400 font-medium mb-1">Kavling</label>
+                <p id="edit-wage-kavling-name" class="font-semibold p-2 bg-slate-800 rounded-lg"></p>
+            </div>
+            <div id="edit-wage-week-container" class="hidden">
+                <label for="edit-wage-week" class="block text-slate-400 font-medium mb-1">Minggu ke-</label>
+                <input type="number" id="edit-wage-week" class="w-full px-4 py-2 input-dark rounded-lg">
+            </div>
+            <div id="edit-wage-desc-container" class="hidden">
+                <label for="edit-wage-desc" class="block text-slate-400 font-medium mb-1">Deskripsi</label>
+                <input type="text" id="edit-wage-desc" class="w-full px-4 py-2 input-dark rounded-lg">
+            </div>
+             <div>
+                <label for="edit-wage-amount" class="block text-slate-400 font-medium mb-1">Jumlah (Rp)</label>
+                <input type="number" id="edit-wage-amount" class="w-full px-4 py-2 input-dark rounded-lg">
+            </div>
+            <div>
+                <label for="edit-wage-date" class="block text-slate-400 font-medium mb-1">Tanggal</label>
+                <input type="date" id="edit-wage-date" class="w-full px-4 py-2 input-dark rounded-lg">
+            </div>
+            <div class="flex justify-end space-x-4 pt-4">
+                <button id="edit-wage-cancel-btn" class="px-6 py-2 btn-secondary rounded-lg font-semibold">Batal</button>
+                <button id="edit-wage-save-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Stock Modal -->
+     <div id="edit-stock-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden px-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-sm space-y-4">
+            <h3 id="edit-stock-modal-title" class="text-xl font-bold text-white">Edit Stok Material</h3>
+            <input type="hidden" id="edit-stock-id">
+            <div>
+                <label class="block text-slate-400 font-medium mb-1">Stok Saat Ini</label>
+                <p id="current-stock-display" class="font-semibold p-2 bg-slate-800 rounded-lg"></p>
+            </div>
+             <div>
+                <label for="edit-stock-amount" class="block text-slate-400 font-medium mb-1">Set Stok Baru</label>
+                <input type="number" id="edit-stock-amount" placeholder="Masukkan jumlah stok baru" class="w-full px-4 py-2 input-dark rounded-lg">
+            </div>
+            <div class="flex justify-end space-x-4 pt-4">
+                <button id="edit-stock-cancel-btn" class="px-6 py-2 btn-secondary rounded-lg font-semibold">Batal</button>
+                <button id="edit-stock-save-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md">Simpan</button>
+            </div>
+        </div>
+    </div>
+     <!-- Custom Modal UI -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden px-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-sm">
+            <h3 id="modal-title" class="text-xl font-bold mb-3 text-white"></h3>
+            <p id="modal-message" class="text-slate-300 mb-6"></p>
+            <div class="flex justify-end">
+                <button id="modal-ok-btn" class="px-6 py-2 btn-primary rounded-lg font-semibold">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Local Storage Logic -->
+    <script type="module">
+        // --- App Configuration & State ---
+        let materials = [];
+        let projects = [];
+        let weeklyWages = [];
+        let subkontContracts = [];
+        let subkontPayments = [];
+        let addendums = [];
+        let addendumPayments = [];
+        let transactions = [];
+        let selectedProject = null;
+        const DB_KEY = 'takabeaLogistikAppLocalData_v3'; 
+
+        // --- Data Handling Functions ---
+        function loadDataFromLocalStorage() {
+            const dataJSON = localStorage.getItem(DB_KEY);
+            if (dataJSON) {
+                const data = JSON.parse(dataJSON);
+                materials = data.materials || [];
+                projects = data.projects || [];
+                weeklyWages = data.weeklyWages || [];
+                subkontContracts = data.subkontContracts || [];
+                subkontPayments = data.subkontPayments || [];
+                addendums = data.addendums || [];
+                addendumPayments = data.addendumPayments || [];
+                transactions = data.transactions || [];
+            }
+        }
+
+        function saveDataToLocalStorage() {
+            const data = {
+                materials,
+                projects,
+                weeklyWages,
+                subkontContracts,
+                subkontPayments,
+                addendums,
+                addendumPayments,
+                transactions
+            };
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+        }
+
+
+        // --- DOM Element References ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const openSidebarBtn = document.getElementById('open-sidebar-btn');
+        const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+        const views = {
+            proyek: document.getElementById('view-proyek'),
+            dashboard: document.getElementById('view-dashboard'),
+            gudang: document.getElementById('view-gudang'),
+            distribusi: document.getElementById('view-distribusi'),
+            kembali: document.getElementById('view-kembali'),
+            upah: document.getElementById('view-upah'),
+            laporan: document.getElementById('view-laporan')
+        };
+        const mainAppContainer = document.getElementById('app-container');
+        const navButtons = {
+            dashboard: document.getElementById('nav-dashboard'),
+            gudang: document.getElementById('nav-gudang'),
+            distribusi: document.getElementById('nav-distribusi'),
+            kembali: document.getElementById('nav-kembali'),
+            upah: document.getElementById('nav-upah'),
+            laporan: document.getElementById('nav-laporan')
+        };
+        const dashboardElements = {
+            totalMaterials: document.getElementById('total-materials'),
+            kavlingList: document.getElementById('kavling-list'),
+            newKavlingName: document.getElementById('new-kavling-name'),
+            newKavlingMandor: document.getElementById('new-kavling-mandor'),
+            newKavlingPelaksana: document.getElementById('new-kavling-pelaksana'),
+            addKavlingBtn: document.getElementById('add-kavling-btn')
+        };
+        const gudangElements = {
+            materialListContainer: document.getElementById('material-list-container'),
+            noMaterials: document.getElementById('no-materials'),
+            newMaterialName: document.getElementById('new-material-name'),
+            newMaterialStock: document.getElementById('new-material-stock'),
+            addMaterialBtn: document.getElementById('add-material-btn')
+        };
+        const distribusiElements = {
+            materialSelect: document.getElementById('dist-material-select'),
+            kavlingSelect: document.getElementById('dist-kavling-select'),
+            quantityInput: document.getElementById('dist-quantity'),
+            priceInput: document.getElementById('dist-price'),
+            dateInput: document.getElementById('dist-date'),
+            distributeBtn: document.getElementById('distribute-btn'),
+            directMaterialName: document.getElementById('direct-material-name'),
+            directKavlingSelect: document.getElementById('direct-kavling-select'),
+            directQuantityInput: document.getElementById('direct-quantity'),
+            directPriceInput: document.getElementById('direct-price'),
+            directDateInput: document.getElementById('direct-date'),
+            directDistributeBtn: document.getElementById('direct-distribute-btn')
+        };
+        const kembaliElements = {
+            materialSelect: document.getElementById('return-material-select'),
+            kavlingSelect: document.getElementById('return-kavling-select'),
+            quantityInput: document.getElementById('return-quantity'),
+            returnBtn: document.getElementById('return-material-btn')
+        };
+        const upahElements = {
+            openAddWageModalBtn: document.getElementById('open-add-wage-modal-btn'),
+            addWageDataModal: document.getElementById('add-wage-data-modal'),
+            closeWageModalBtn: document.getElementById('close-wage-modal-btn'),
+            
+            contractKavlingSelect: document.getElementById('contract-kavling-select'),
+            contractValueInput: document.getElementById('contract-value-input'),
+            saveContractValueBtn: document.getElementById('save-contract-value-btn'),
+            
+            weeklyWageKavlingSelect: document.getElementById('weekly-wage-kavling-select'),
+            weeklyWageWeekInput: document.getElementById('weekly-wage-week-input'),
+            weeklyWageDescInput: document.getElementById('weekly-wage-desc-input'),
+            weeklyWageAmountInput: document.getElementById('weekly-wage-amount-input'),
+            weeklyWageDateInput: document.getElementById('weekly-wage-date-input'),
+            addWeeklyWageBtn: document.getElementById('add-weekly-wage-btn'),
+
+            subkontContractKavlingSelect: document.getElementById('subkont-contract-kavling-select'),
+            subkontContractDescInput: document.getElementById('subkont-contract-desc-input'),
+            subkontContractValueInput: document.getElementById('subkont-contract-value-input'),
+            subkontContractDateInput: document.getElementById('subkont-contract-date-input'),
+            saveSubkontContractBtn: document.getElementById('save-subkont-contract-btn'),
+
+            subkontPaymentKavlingSelect: document.getElementById('subkont-payment-kavling-select'),
+            subkontPaymentItemSelect: document.getElementById('subkont-payment-item-select'),
+            subkontPaymentDescInput: document.getElementById('subkont-payment-desc-input'),
+            subkontPaymentAmountInput: document.getElementById('subkont-payment-amount-input'),
+            subkontPaymentDateInput: document.getElementById('subkont-payment-date-input'),
+            addSubkontPaymentBtn: document.getElementById('add-subkont-payment-btn'),
+            
+            addendumKavlingSelect: document.getElementById('addendum-kavling-select'),
+            addendumDescInput: document.getElementById('addendum-desc-input'),
+            addendumAmountInput: document.getElementById('addendum-amount-input'),
+            addendumDateInput: document.getElementById('addendum-date-input'),
+            addAddendumBtn: document.getElementById('add-addendum-btn'),
+
+            addendumPaymentKavlingSelect: document.getElementById('addendum-payment-kavling-select'),
+            addendumPaymentItemSelect: document.getElementById('addendum-payment-item-select'),
+            addendumPaymentDescInput: document.getElementById('addendum-payment-desc-input'),
+            addendumPaymentAmountInput: document.getElementById('addendum-payment-amount-input'),
+            addendumPaymentDateInput: document.getElementById('addendum-payment-date-input'),
+            addAddendumPaymentBtn: document.getElementById('add-addendum-payment-btn'),
+            
+            wageSummaryContainer: document.getElementById('wage-summary-container'),
+            noKavlingSummary: document.getElementById('no-kavling-summary')
+        };
+        const laporanElements = {
+            kavlingSelect: document.getElementById('report-kavling-select'),
+            detailsContainer: document.getElementById('report-details'),
+            reportTitle: document.getElementById('report-title'),
+            reportBody: document.getElementById('report-body'),
+            reportTotalMaterialCost: document.getElementById('report-total-material-cost'),
+            reportTotalUpahCost: document.getElementById('report-total-upah-cost'),
+            reportGrandTotalCost: document.getElementById('report-grand-total-cost'),
+            downloadCsvBtn: document.getElementById('download-csv-btn'),
+            downloadPdfRekapBtn: document.getElementById('download-pdf-rekap-btn'),
+            downloadPdfRincianBtn: document.getElementById('download-pdf-rincian-btn')
+        };
+        const proyekElements = {
+            list: document.getElementById('project-selection-list'),
+            addBtn: document.getElementById('add-project-btn'),
+            nameInput: document.getElementById('new-project-name'),
+        };
+        const modal = {
+            container: document.getElementById('modal'),
+            title: document.getElementById('modal-title'),
+            message: document.getElementById('modal-message'),
+            okBtn: document.getElementById('modal-ok-btn')
+        };
+        const confirmationModal = {
+            container: document.getElementById('confirmation-modal'),
+            title: document.getElementById('confirmation-modal-title'),
+            message: document.getElementById('confirmation-modal-message'),
+            cancelBtn: document.getElementById('confirmation-modal-cancel-btn'),
+            confirmBtn: document.getElementById('confirmation-modal-confirm-btn')
+        };
+        const editWageModal = {
+            container: document.getElementById('edit-wage-modal'),
+            title: document.getElementById('edit-wage-modal-title'),
+            idInput: document.getElementById('edit-wage-id'),
+            typeInput: document.getElementById('edit-wage-type'),
+            kavlingName: document.getElementById('edit-wage-kavling-name'),
+            weekContainer: document.getElementById('edit-wage-week-container'),
+            weekInput: document.getElementById('edit-wage-week'),
+            descContainer: document.getElementById('edit-wage-desc-container'),
+            descInput: document.getElementById('edit-wage-desc'),
+            amountInput: document.getElementById('edit-wage-amount'),
+            dateInput: document.getElementById('edit-wage-date'),
+            cancelBtn: document.getElementById('edit-wage-cancel-btn'),
+            saveBtn: document.getElementById('edit-wage-save-btn')
+        };
+        const editStockModal = {
+            container: document.getElementById('edit-stock-modal'),
+            title: document.getElementById('edit-stock-modal-title'),
+            idInput: document.getElementById('edit-stock-id'),
+            currentStockDisplay: document.getElementById('current-stock-display'),
+            amountInput: document.getElementById('edit-stock-amount'),
+            cancelBtn: document.getElementById('edit-stock-cancel-btn'),
+            saveBtn: document.getElementById('edit-stock-save-btn')
+        };
+        const currentProjectName = document.getElementById('current-project-name');
+        const exitProjectBtn = document.getElementById('exit-project-btn');
+
+        // --- UI & Utility Functions ---
+        let confirmCallback = null;
+
+        function showModal(title, message) {
+            modal.title.textContent = title;
+            modal.message.textContent = message;
+            modal.container.classList.remove('hidden');
+        }
+
+        function hideModal() {
+            modal.container.classList.add('hidden');
+        }
+
+        function showConfirmationModal(title, message, onConfirm) {
+            confirmationModal.title.textContent = title;
+            confirmationModal.message.textContent = message;
+            confirmCallback = onConfirm;
+            confirmationModal.container.classList.remove('hidden');
+        }
+
+        function hideConfirmationModal() {
+            confirmationModal.container.classList.add('hidden');
+            confirmCallback = null;
+        }
+
+        modal.okBtn.addEventListener('click', hideModal);
+        confirmationModal.cancelBtn.addEventListener('click', hideConfirmationModal);
+        confirmationModal.confirmBtn.addEventListener('click', () => {
+            if (typeof confirmCallback === 'function') {
+                confirmCallback();
+            }
+            hideConfirmationModal();
+        });
+
+        editWageModal.cancelBtn.addEventListener('click', () => {
+            editWageModal.container.classList.add('hidden');
+        });
+
+        editWageModal.saveBtn.addEventListener('click', () => {
+            const id = editWageModal.idInput.value;
+            const type = editWageModal.typeInput.value;
+            const amount = parseFloat(editWageModal.amountInput.value);
+            const date = editWageModal.dateInput.value;
+            const description = editWageModal.descInput.value.trim();
+
+            if (isNaN(amount) || amount < 0 || !date) {
+                return showModal('Input Tidak Valid', 'Mohon isi jumlah dan tanggal dengan benar.');
+            }
+            
+            let collection;
+            if (type === 'weekly') collection = weeklyWages;
+            else if (type === 'addendum') collection = addendums;
+            else if (type === 'subkontContract') collection = subkontContracts;
+            else if (type === 'addendumPayment') collection = addendumPayments;
+            else if (type === 'subkontPayment') collection = subkontPayments;
+            else return;
+
+            const itemIndex = collection.findIndex(w => w.id === id);
+            
+            if (itemIndex === -1) {
+                return showModal('Error', 'Data tidak ditemukan untuk diedit.');
+            }
+            
+            // Universal properties
+            collection[itemIndex].amount = amount;
+            collection[itemIndex].description = description;
+
+            if (type === 'weekly') {
+                const weekNumber = parseInt(editWageModal.weekInput.value, 10);
+                if (isNaN(weekNumber) || weekNumber <= 0) {
+                     return showModal('Input Tidak Valid', 'Mohon isi nomor minggu dengan benar.');
+                }
+                collection[itemIndex].weekNumber = weekNumber;
+                collection[itemIndex].paymentDate = date;
+            } else if (type.includes('Payment')) {
+                 collection[itemIndex].paymentDate = date;
+            } else { // addendum or subkontContract
+                if (!description) {
+                     return showModal('Input Tidak Valid', 'Mohon isi deskripsi.');
+                }
+                collection[itemIndex].date = date; 
+            }
+
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', 'Data berhasil diperbarui.');
+            editWageModal.container.classList.add('hidden');
+        });
+
+        function switchView(viewName) {
+            Object.values(views).forEach(v => v.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                 b.classList.remove('active');
+            });
+            
+            const mainViews = document.querySelectorAll('#app-container > .p-8 > .app-view');
+            mainViews.forEach(v => v.classList.add('hidden'));
+            
+            if (views[viewName]) {
+                 views[viewName].classList.remove('hidden');
+            }
+           
+            const navBtn = document.getElementById(`nav-${viewName}`);
+            if (navBtn) {
+                navBtn.classList.add('active');
+            }
+            
+            if (viewName === 'laporan') {
+                laporanElements.detailsContainer.classList.add('hidden');
+            }
+        }
+        
+        // --- Sidebar Logic ---
+        const collapseSidebarBtn = document.getElementById('collapse-sidebar-btn');
+
+        openSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            sidebarBackdrop.classList.remove('hidden');
+        });
+        
+        function closeMobileSidebar() {
+            sidebar.classList.remove('open');
+            sidebarBackdrop.classList.add('hidden');
+        }
+
+        closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+        sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+
+        collapseSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('is-collapsed');
+        });
+
+
+        exitProjectBtn.addEventListener('click', () => {
+            selectedProject = null;
+            mainAppContainer.classList.add('hidden');
+            document.getElementById('view-proyek').classList.remove('hidden');
+            renderProjects();
+        });
+
+        function selectProject(project) {
+            selectedProject = project;
+            currentProjectName.textContent = project.name;
+            mainAppContainer.classList.remove('hidden');
+            document.getElementById('view-proyek').classList.add('hidden');
+            switchView('dashboard');
+            updateUIForNewState();
+        }
+
+        // --- App Initialization ---
+        function initApp() {
+            loadDataFromLocalStorage();
+            renderProjects();
+            renderMaterials();
+            setupWageModal();
+            switchView('proyek');
+            loadingScreen.classList.add('hidden');
+        }
+        
+        // --- Rendering Functions ---
+        function renderProjects() {
+            proyekElements.list.innerHTML = '';
+            if (projects.length === 0) {
+                proyekElements.list.innerHTML = '<p class="text-sm italic text-slate-500">Tidak ada proyek ditemukan.</p>';
+            } else {
+                projects.forEach(project => {
+                    const projectDiv = document.createElement('div');
+                    projectDiv.className = "p-4 border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors flex justify-between items-center";
+
+                    let kavlingDisplay = 'Belum ada';
+                    if (project.kavling && project.kavling.length > 0) {
+                         kavlingDisplay = project.kavling.map(k => k.name).join(', ');
+                    }
+
+                    const projectContent = document.createElement('div');
+                    projectContent.className = "flex-1 cursor-pointer mr-4";
+                    projectContent.innerHTML = `
+                        <h4 class="font-bold text-white">${project.name}</h4>
+                        <p class="text-sm text-slate-400 truncate">Kavling: ${kavlingDisplay}</p>
+                    `;
+                    projectContent.addEventListener('click', () => {
+                        selectProject(project);
+                    });
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.dataset.id = project.id;
+                    deleteBtn.dataset.name = project.name;
+                    deleteBtn.className = "delete-project-btn p-2 rounded-full text-slate-500 hover:bg-red-900/50 hover:text-red-400 transition-colors flex-shrink-0";
+                    deleteBtn.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>`;
+
+                    projectDiv.appendChild(projectContent);
+                    projectDiv.appendChild(deleteBtn);
+                    proyekElements.list.appendChild(projectDiv);
+                });
+            }
+        }
+
+
+        function renderKavlingList(kavling) {
+            dashboardElements.kavlingList.innerHTML = '';
+            if (!kavling || kavling.length === 0) {
+                dashboardElements.kavlingList.innerHTML = '<li class="text-sm italic text-slate-500 list-none">Belum ada kavling ditambahkan.</li>';
+            } else {
+                kavling.forEach(k => {
+                    const li = document.createElement('li');
+                    li.className = "p-2 border-b border-slate-800 flex justify-between items-center";
+                    li.innerHTML = `
+                        <div class="flex-grow">
+                            <span class="font-bold text-slate-200">Kavling ${k.name}</span>
+                            <div class="text-sm pl-4 text-slate-400">
+                                <p><span class="font-semibold">Mandor:</span> ${k.mandor}</p>
+                                <p><span class="font-semibold">Pelaksana:</span> ${k.pelaksana}</p>
+                            </div>
+                        </div>
+                        <button data-name="${escapeAttr(k.name)}" class="delete-kavling-btn p-2 rounded-full text-slate-500 hover:bg-red-900/50 hover:text-red-400 transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    `;
+                    dashboardElements.kavlingList.appendChild(li);
+                });
+            }
+        }
+
+
+        function renderMaterials() {
+            const container = gudangElements.materialListContainer;
+            container.innerHTML = '';
+            if (materials.length === 0) {
+                gudangElements.noMaterials.classList.remove('hidden');
+            } else {
+                 gudangElements.noMaterials.classList.add('hidden');
+                materials.sort((a, b) => a.name.localeCompare(b.name)).forEach(material => {
+                    const materialDiv = document.createElement('div');
+                    materialDiv.className = "p-4 border border-slate-700 rounded-lg bg-slate-800";
+                    materialDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-white">${material.name}</h4>
+                                <span class="text-sm font-semibold text-slate-300">Stok: ${material.stock}</span>
+                            </div>
+                            <div class="flex space-x-1">
+                                 <button data-id="${material.id}" data-name="${escapeAttr(material.name)}" data-stock="${material.stock}" class="edit-stock-btn p-2 rounded-md hover:bg-gray-700 transition-colors">
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z"></path></svg>
+                                 </button>
+                                 <button data-id="${material.id}" class="manage-stock-toggle-btn p-2 rounded-md hover:bg-gray-700 transition-colors">
+                                    <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" /></svg>
+                                 </button>
+                                  <button data-id="${material.id}" data-name="${escapeAttr(material.name)}" class="delete-material-btn p-2 rounded-md hover:bg-gray-700 transition-colors">
+                                    <svg class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                 </button>
+                            </div>
+                        </div>
+                        <div id="manage-stock-form-${material.id}" class="hidden items-center space-x-2 pt-2 mt-2 border-t border-slate-700">
+                            <input type="number" placeholder="Jumlah" min="1" class="flex-1 w-full px-2 py-1 input-dark rounded-lg text-sm focus:outline-none focus:ring-2">
+                            <button data-id="${material.id}" data-action="add" class="adjust-stock-btn bg-green-600 text-white px-3 py-1 rounded-md text-sm font-semibold hover:bg-green-700 transition-colors">Tambah</button>
+                            <button data-id="${material.id}" data-action="subtract" class="adjust-stock-btn bg-red-600 text-white px-3 py-1 rounded-md text-sm font-semibold hover:bg-red-700 transition-colors">Kurangi</button>
+                        </div>
+                    `;
+                    container.appendChild(materialDiv);
+                    
+                    const manageToggleBtn = materialDiv.querySelector('.manage-stock-toggle-btn');
+                    const editBtn = materialDiv.querySelector('.edit-stock-btn');
+                    const deleteBtn = materialDiv.querySelector('.delete-material-btn');
+                    const manageForm = materialDiv.querySelector(`#manage-stock-form-${material.id}`);
+
+                    manageToggleBtn.addEventListener('click', () => {
+                        manageForm.classList.toggle('hidden');
+                        manageForm.classList.toggle('flex');
+                    });
+
+                    editBtn.addEventListener('click', (e) => {
+                        const button = e.currentTarget;
+                        const materialId = button.dataset.id;
+                        const materialName = button.dataset.name;
+                        const currentStock = button.dataset.stock;
+                        
+                        editStockModal.title.textContent = `Edit Stok: ${materialName}`;
+                        editStockModal.idInput.value = materialId;
+                        editStockModal.currentStockDisplay.textContent = currentStock;
+                        editStockModal.amountInput.value = '';
+                        editStockModal.container.classList.remove('hidden');
+                    });
+                    
+                    deleteBtn.addEventListener('click', e => {
+                        const button = e.currentTarget;
+                        const materialId = button.dataset.id;
+                        const materialName = button.dataset.name;
+                        showConfirmationModal(
+                            'Hapus Material?',
+                            `Anda yakin ingin menghapus "${materialName}"? Semua data transaksi terkait material ini juga akan dihapus.`,
+                            () => handleDeleteMaterial(materialId)
+                        );
+                    });
+
+                    const adjustBtns = materialDiv.querySelectorAll('.adjust-stock-btn');
+                    adjustBtns.forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const button = e.currentTarget;
+                            const materialId = button.dataset.id;
+                            const action = button.dataset.action;
+                            const quantityInput = manageForm.querySelector('input');
+                            const quantity = parseInt(quantityInput.value, 10);
+
+                            if (isNaN(quantity) || quantity <= 0) {
+                                return showModal('Input Tidak Valid', 'Mohon masukkan jumlah yang valid.');
+                            }
+
+                            const materialIndex = materials.findIndex(m => m.id === materialId);
+                            if (materialIndex === -1) return;
+
+                            if (action === 'add') {
+                                materials[materialIndex].stock += quantity;
+                            } else if (action === 'subtract') {
+                                if (materials[materialIndex].stock < quantity) {
+                                    return showModal('Error', 'Stok tidak mencukupi untuk dikurangi.');
+                                }
+                                materials[materialIndex].stock -= quantity;
+                            }
+
+                            saveDataToLocalStorage();
+                            renderMaterials();
+                            updateUIForNewState();
+                        });
+                    });
+                });
+            }
+        }
+        
+        function formatCurrency(value) {
+            return `Rp${(value || 0).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        }
+        
+        function escapeAttr(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/"/g, '&quot;');
+        }
+        
+        function updateUIForNewState() {
+            if (!selectedProject) return;
+            // Find the latest version of the selected project
+            const updatedProject = projects.find(p => p.id === selectedProject.id);
+            if (updatedProject) {
+                selectedProject = updatedProject;
+            } else {
+                // Project was deleted, go back to selection
+                exitProjectBtn.click();
+                return;
+            }
+
+            renderKavlingList(selectedProject.kavling);
+            dashboardElements.totalMaterials.textContent = materials.length;
+            renderAllSelects();
+            renderWageSummary();
+            renderMaterials();
+        }
+
+
+        function renderWageSummary() {
+            const container = upahElements.wageSummaryContainer;
+            container.innerHTML = '';
+            
+            if (!selectedProject || !selectedProject.kavling || selectedProject.kavling.length === 0) {
+                upahElements.noKavlingSummary.classList.remove('hidden');
+                container.appendChild(upahElements.noKavlingSummary);
+                return;
+            }
+
+            upahElements.noKavlingSummary.classList.add('hidden');
+            
+            const projectWeeklyWages = weeklyWages.filter(w => w.projectId === selectedProject.id);
+            const projectSubkontContracts = subkontContracts.filter(sc => sc.projectId === selectedProject.id);
+            const projectSubkontPayments = subkontPayments.filter(sp => sp.projectId === selectedProject.id);
+            const projectAddendums = addendums.filter(a => a.projectId === selectedProject.id);
+            const projectAddendumPayments = addendumPayments.filter(p => p.projectId === selectedProject.id);
+
+            selectedProject.kavling.forEach(kavling => {
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = "p-6 glass-card rounded-xl space-y-2";
+
+                const weeklyPaymentsForKavling = projectWeeklyWages.filter(wage => wage.kavlingName === kavling.name);
+                const subkontContractsForKavling = projectSubkontContracts.filter(sc => sc.kavlingName === kavling.name);
+                const addendumsForKavling = projectAddendums.filter(a => a.kavlingName === kavling.name);
+                const totalWeeklyPaid = weeklyPaymentsForKavling.reduce((sum, wage) => sum + wage.amount, 0);
+                const initialContractValue = kavling.nilaiKontrak || 0;
+                const sisaKontrakAwal = initialContractValue - totalWeeklyPaid;
+                const percentageAbsorbedInitial = initialContractValue > 0 ? (totalWeeklyPaid / initialContractValue * 100) : 0;
+                const displayPercentageInitial = Math.min(percentageAbsorbedInitial, 100).toFixed(1);
+                
+                let addendumDetailsHTML = '';
+                addendumsForKavling.forEach(item => {
+                    const payments = projectAddendumPayments.filter(p => p.addendumId === item.id);
+                    const paymentRows = payments.map(p => `
+                        <tr class="border-b border-slate-800">
+                            <td class="py-2 px-3">${p.paymentDate}</td>
+                            <td class="py-2 px-3">${escapeAttr(p.description || '-')}</td>
+                            <td class="py-2 px-3 text-right">${formatCurrency(p.amount)}</td>
+                            <td class="py-2 px-3 text-center">
+                                <button class="edit-wage-btn p-1" data-id="${p.id}" data-type="addendumPayment" data-kavling-name="${escapeAttr(kavling.name)}" data-desc="${escapeAttr(p.description || '')}" data-date="${p.paymentDate}" data-amount="${p.amount}"><svg class="w-4 h-4 text-slate-500 hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg></button>
+                                <button class="delete-wage-btn p-1" data-id="${p.id}" data-type="addendumPayment" data-kavling-name="${escapeAttr(kavling.name)}"><svg class="w-4 h-4 text-slate-500 hover:text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button>
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    addendumDetailsHTML += `
+                        <div class="mt-2 pl-4">
+                            <h5 class="font-semibold text-slate-300 text-sm">Detail Pembayaran untuk: ${escapeAttr(item.description)}</h5>
+                            <table class="min-w-full text-sm mt-1">
+                                <thead class="bg-slate-900/50"><tr><th class="py-1 px-3 text-left">Tanggal</th><th class="py-1 px-3 text-left">Keterangan</th><th class="py-1 px-3 text-right">Jumlah</th><th class="py-1 px-3 text-center">Aksi</th></tr></thead>
+                                <tbody>${paymentRows || '<tr><td colspan="4" class="text-center italic py-2 text-slate-500">Belum ada pembayaran.</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                    `;
+                });
+                
+                let subkontDetailsHTML = '';
+                subkontContractsForKavling.forEach(item => {
+                    const payments = projectSubkontPayments.filter(p => p.subkontContractId === item.id);
+                    const paymentRows = payments.map(p => `
+                        <tr class="border-b border-slate-800">
+                            <td class="py-2 px-3">${p.paymentDate}</td>
+                            <td class="py-2 px-3">${escapeAttr(p.description || '-')}</td>
+                            <td class="py-2 px-3 text-right">${formatCurrency(p.amount)}</td>
+                            <td class="py-2 px-3 text-center">
+                                 <button class="edit-wage-btn p-1" data-id="${p.id}" data-type="subkontPayment" data-kavling-name="${escapeAttr(kavling.name)}" data-desc="${escapeAttr(p.description || '')}" data-date="${p.paymentDate}" data-amount="${p.amount}"><svg class="w-4 h-4 text-slate-500 hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg></button>
+                                <button class="delete-wage-btn p-1" data-id="${p.id}" data-type="subkontPayment" data-kavling-name="${escapeAttr(kavling.name)}"><svg class="w-4 h-4 text-slate-500 hover:text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button>
+                            </td>
+                        </tr>
+                    `).join('');
+
+                     subkontDetailsHTML += `
+                        <div class="mt-2 pl-4">
+                            <h5 class="font-semibold text-slate-300 text-sm">Detail Pembayaran untuk: ${escapeAttr(item.description)}</h5>
+                            <table class="min-w-full text-sm mt-1">
+                                <thead class="bg-slate-900/50"><tr><th class="py-1 px-3 text-left">Tanggal</th><th class="py-1 px-3 text-left">Keterangan</th><th class="py-1 px-3 text-right">Jumlah</th><th class="py-1 px-3 text-center">Aksi</th></tr></thead>
+                                <tbody>${paymentRows || '<tr><td colspan="4" class="text-center italic py-2 text-slate-500">Belum ada pembayaran.</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                    `;
+                });
+
+
+                let detailsHTML = `
+                    <!-- 1. Upah Kerja Pembangunan -->
+                    <div class="pt-2 space-y-2">
+                        <p class="font-bold text-slate-300 border-b border-slate-700 pb-1">1. Upah Kerja Pembangunan</p>
+                        <div class="text-sm pl-2 space-y-1">
+                            <p><strong>Kontrak Pembangunan:</strong> ${formatCurrency(initialContractValue)}</p>
+                            <p><strong>Terserap:</strong> ${formatCurrency(totalWeeklyPaid)}</p>
+                            <p class="font-semibold ${sisaKontrakAwal >=0 ? 'text-green-400' : 'text-red-400'}"><strong>Sisa Kontrak:</strong> ${formatCurrency(sisaKontrakAwal)}</p>
+                             <div class="pt-1">
+                                <p class="font-semibold text-sky-400">
+                                    <strong>Persentase Terserap:</strong> ${displayPercentageInitial}%
+                                </p>
+                                <div class="w-full bg-slate-700 rounded-full h-2.5 mt-1">
+                                    <div class="bg-sky-500 h-2.5 rounded-full" style="width: ${displayPercentageInitial}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <h4 class="font-semibold text-slate-300 mb-2 text-sm pt-2">Detail Pembayaran:</h4>
+                         <table class="min-w-full text-sm">
+                            <thead class="bg-slate-900">
+                                <tr>
+                                    <th class="py-2 px-3 text-left">Minggu</th>
+                                    <th class="py-2 px-3 text-left">Tanggal</th>
+                                    <th class="py-2 px-3 text-left">Keterangan</th>
+                                    <th class="py-2 px-3 text-right">Jumlah</th>
+                                    <th class="py-2 px-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${weeklyPaymentsForKavling.sort((a, b) => a.weekNumber - b.weekNumber).map(p => `
+                                    <tr class="border-b border-slate-800">
+                                        <td class="py-2 px-3">${p.weekNumber}</td>
+                                        <td class="py-2 px-3">${p.paymentDate}</td>
+                                        <td class="py-2 px-3">${escapeAttr(p.description || '-')}</td>
+                                        <td class="py-2 px-3 text-right">${formatCurrency(p.amount)}</td>
+                                        <td class="py-2 px-3 text-center">
+                                            <button class="edit-wage-btn p-1" data-id="${p.id}" data-type="weekly" data-kavling-name="${escapeAttr(p.kavlingName)}" data-week="${p.weekNumber}" data-date="${p.paymentDate}" data-amount="${p.amount}" data-desc="${escapeAttr(p.description || '')}"><svg class="w-4 h-4 text-slate-500 hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg></button>
+                                            <button class="delete-wage-btn p-1" data-id="${p.id}" data-type="weekly" data-kavling-name="${escapeAttr(p.kavlingName)}"><svg class="w-4 h-4 text-slate-500 hover:text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button>
+                                        </td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="5" class="text-center italic py-3 text-slate-500">Belum ada pembayaran upah.</td></tr>'}
+                            </tbody>
+                         </table>
+                    </div>
+
+                    <!-- 2. Addendum Pekerjaan -->
+                     <div class="pt-2 space-y-2">
+                        <p class="font-bold text-slate-300 border-b border-slate-700 pb-1">2. Addendum Pekerjaan</p>
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-900/50">
+                                <tr>
+                                    <th class="py-2 px-3 text-left">Item Pekerjaan</th>
+                                    <th class="py-2 px-3 text-right">Total Biaya</th>
+                                    <th class="py-2 px-3 text-right">Terserap</th>
+                                    <th class="py-2 px-3 text-right">Sisa</th>
+                                    <th class="py-2 px-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${addendumsForKavling.length > 0 ? addendumsForKavling.map(item => {
+                                    const payments = projectAddendumPayments.filter(p => p.addendumId === item.id);
+                                    const terserap = payments.reduce((sum, p) => sum + p.amount, 0);
+                                    const sisa = item.amount - terserap;
+                                    return `
+                                        <tr class="border-b border-slate-800">
+                                            <td class="py-2 px-3">${escapeAttr(item.description)}</td>
+                                            <td class="py-2 px-3 text-right">${formatCurrency(item.amount)}</td>
+                                            <td class="py-2 px-3 text-right">${formatCurrency(terserap)}</td>
+                                            <td class="py-2 px-3 text-right font-semibold ${sisa >= 0 ? 'text-green-400' : 'text-red-400'}">${formatCurrency(sisa)}</td>
+                                            <td class="py-2 px-3 text-center">
+                                                <button class="edit-wage-btn p-1" data-id="${item.id}" data-type="addendum" data-kavling-name="${escapeAttr(item.kavlingName)}" data-desc="${escapeAttr(item.description)}" data-date="${item.date}" data-amount="${item.amount}"><svg class="w-4 h-4 text-slate-500 hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg></button>
+                                                <button class="delete-wage-btn p-1" data-id="${item.id}" data-type="addendum" data-kavling-name="${escapeAttr(item.kavlingName)}"><svg class="w-4 h-4 text-slate-500 hover:text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('') : '<tr><td colspan="5" class="text-center italic py-3 text-slate-500">Belum ada item pekerjaan addendum.</td></tr>'}
+                            </tbody>
+                        </table>
+                        ${addendumsForKavling.length > 0 ? addendumDetailsHTML : ''}
+                    </div>
+
+                    <!-- 3. Pekerjaan Subkontraktor -->
+                    <div class="pt-2 space-y-2">
+                        <p class="font-bold text-slate-300 border-b border-slate-700 pb-1">3. Pekerjaan Subkontraktor</p>
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-900/50">
+                                <tr>
+                                    <th class="py-2 px-3 text-left">Item Pekerjaan</th>
+                                    <th class="py-2 px-3 text-right">Total Biaya</th>
+                                    <th class="py-2 px-3 text-right">Terserap</th>
+                                    <th class="py-2 px-3 text-right">Sisa</th>
+                                    <th class="py-2 px-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${subkontContractsForKavling.length > 0 ? subkontContractsForKavling.map(item => {
+                                    const payments = projectSubkontPayments.filter(p => p.subkontContractId === item.id);
+                                    const terserap = payments.reduce((sum, p) => sum + p.amount, 0);
+                                    const sisa = item.amount - terserap;
+                                    return `
+                                        <tr class="border-b border-slate-800">
+                                            <td class="py-2 px-3">${escapeAttr(item.description)}</td>
+                                            <td class="py-2 px-3 text-right">${formatCurrency(item.amount)}</td>
+                                            <td class="py-2 px-3 text-right">${formatCurrency(terserap)}</td>
+                                            <td class="py-2 px-3 text-right font-semibold ${sisa >= 0 ? 'text-green-400' : 'text-red-400'}">${formatCurrency(sisa)}</td>
+                                            <td class="py-2 px-3 text-center">
+                                                 <button class="edit-wage-btn p-1" data-id="${item.id}" data-type="subkontContract" data-kavling-name="${escapeAttr(item.kavlingName)}" data-desc="${escapeAttr(item.description)}" data-date="${item.date}" data-amount="${item.amount}"><svg class="w-4 h-4 text-slate-500 hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg></button>
+                                                 <button class="delete-wage-btn p-1" data-id="${item.id}" data-type="subkontContract" data-kavling-name="${escapeAttr(item.kavlingName)}"><svg class="w-4 h-4 text-slate-500 hover:text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('') : '<tr><td colspan="5" class="text-center italic py-3 text-slate-500">Belum ada item pekerjaan subkontraktor.</td></tr>'}
+                            </tbody>
+                        </table>
+                         ${subkontContractsForKavling.length > 0 ? subkontDetailsHTML : ''}
+                    </div>
+                `;
+
+                summaryDiv.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold text-lg text-white">Kavling ${kavling.name}</p>
+                            <p class="text-sm text-slate-400">Mandor: ${kavling.mandor}</p>
+                        </div>
+                         <div class="flex items-center space-x-4">
+                            <button data-kavling-name="${kavling.name}" class="download-wage-csv-btn text-sm text-green-400 hover:underline font-medium">Unduh CSV</button>
+                            <button data-kavling-name="${kavling.name}" class="download-wage-pdf-btn text-sm text-red-400 hover:underline font-medium">Unduh PDF</button>
+                            <button class="toggle-details-btn p-2 rounded-md hover:bg-slate-700">
+                                <svg class="w-5 h-5 text-sky-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="details-container hidden mt-4 pt-4 border-t border-slate-700 space-y-6">
+                        ${detailsHTML}
+                    </div>
+                `;
+                container.appendChild(summaryDiv);
+            });
+        }
+        
+        function openEditWageModal(data) {
+            editWageModal.idInput.value = data.id;
+            editWageModal.typeInput.value = data.type;
+            editWageModal.kavlingName.textContent = data.kavlingName;
+            editWageModal.amountInput.value = data.amount;
+
+            // Hide all conditional fields first
+            editWageModal.weekContainer.classList.add('hidden');
+            editWageModal.descContainer.classList.add('hidden');
+
+            if (data.type === 'weekly') {
+                editWageModal.title.textContent = "Edit Upah Pembangunan";
+                editWageModal.weekContainer.classList.remove('hidden');
+                editWageModal.descContainer.classList.remove('hidden');
+                editWageModal.weekInput.value = data.week;
+                editWageModal.descInput.value = data.desc;
+                editWageModal.dateInput.value = data.date;
+            } else if (data.type === 'addendum' || data.type === 'subkontContract') {
+                editWageModal.title.textContent = data.type === 'addendum' ? "Edit Item Addendum" : "Edit Item Subkontraktor";
+                editWageModal.descContainer.classList.remove('hidden');
+                editWageModal.descInput.value = data.desc;
+                editWageModal.dateInput.value = data.date;
+            } else if (data.type === 'addendumPayment' || data.type === 'subkontPayment') {
+                 editWageModal.title.textContent = data.type === 'addendumPayment' ? "Edit Pembayaran Addendum" : "Edit Pembayaran Subkontraktor";
+                editWageModal.descContainer.classList.remove('hidden');
+                editWageModal.descInput.value = data.desc;
+                editWageModal.dateInput.value = data.date;
+            }
+            
+            editWageModal.container.classList.remove('hidden');
+        }
+
+
+        upahElements.wageSummaryContainer.addEventListener('click', (e) => {
+            const toggleBtn = e.target.closest('.toggle-details-btn');
+            if (toggleBtn) {
+                const detailsContainer = toggleBtn.closest('.p-6').querySelector('.details-container');
+                const icon = toggleBtn.querySelector('svg');
+                detailsContainer.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            }
+             if (e.target.closest('.download-wage-csv-btn')) {
+                const kavlingName = e.target.closest('.download-wage-csv-btn').dataset.kavlingName;
+                downloadWageDetailCsv(kavlingName);
+            }
+            if (e.target.closest('.download-wage-pdf-btn')) {
+                const kavlingName = e.target.closest('.download-wage-pdf-btn').dataset.kavlingName;
+                downloadWageDetailPdf(kavlingName);
+            }
+            const editBtn = e.target.closest('.edit-wage-btn');
+            if (editBtn) {
+                const data = { ...editBtn.dataset };
+                openEditWageModal(data);
+            }
+
+            const deleteBtn = e.target.closest('.delete-wage-btn');
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                const type = deleteBtn.dataset.type;
+                const kavlingName = deleteBtn.dataset.kavlingName;
+                let itemType = 'data';
+                if (type === 'weekly') itemType = 'pembayaran upah mingguan';
+                else if (type === 'addendum') itemType = 'item pekerjaan addendum';
+                else if (type === 'subkontContract') itemType = 'item pekerjaan subkontraktor';
+                else if (type === 'addendumPayment') itemType = 'pembayaran addendum';
+                else if (type === 'subkontPayment') itemType = 'pembayaran subkontraktor';
+
+                let confirmationMessage = `Anda yakin ingin menghapus ${itemType} untuk kavling ${kavlingName}? Tindakan ini tidak dapat diurungkan.`;
+                if(type === 'addendum' || type === 'subkontContract') {
+                    confirmationMessage = `Anda yakin ingin menghapus ${itemType} untuk kavling ${kavlingName}? Semua pembayaran terkait juga akan dihapus. Tindakan ini tidak dapat diurungkan.`;
+                }
+                
+                showConfirmationModal(
+                    `Hapus Data?`,
+                    confirmationMessage,
+                    () => handleDeleteWage(id, type)
+                );
+            }
+        });
+
+        function renderAllSelects() {
+            if (!selectedProject) return;
+            let kavlingOptions = '';
+            if (selectedProject.kavling && selectedProject.kavling.length > 0) {
+                kavlingOptions = selectedProject.kavling.map(k => `<option value="${k.name}">${k.name}</option>`).join('');
+            }
+
+            const materialOptions = materials.map(m => `<option value="${m.id}">${m.name} (Stok: ${m.stock})</option>`).join('');
+
+            const allKavlingSelects = document.querySelectorAll('.kavling-select');
+            allKavlingSelects.forEach(select => {
+                select.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            })
+            
+            distribusiElements.kavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            distribusiElements.directKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            kembaliElements.kavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            upahElements.contractKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            upahElements.weeklyWageKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            upahElements.subkontContractKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            upahElements.subkontPaymentKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            upahElements.addendumKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+            upahElements.addendumPaymentKavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Kavling</option>' + kavlingOptions;
+
+            const reportKavlingOptions = kavlingOptions.replaceAll('<option value="', '<option value="Laporan Kavling ').replaceAll('">', '">');
+            laporanElements.kavlingSelect.innerHTML = '<option value="" disabled selected>Pilih Laporan</option><option value="all" class="font-bold">Laporan Proyek Total</option>' + reportKavlingOptions;
+            
+            distribusiElements.materialSelect.innerHTML = '<option value="" disabled selected>Pilih Material</option>' + materialOptions;
+            kembaliElements.materialSelect.innerHTML = '<option value="" disabled selected>Pilih kavling dulu</option>';
+            kembaliElements.materialSelect.disabled = true;
+        }
+
+        // --- Event Listeners for App Logic ---
+        Object.keys(navButtons).forEach(key => {
+            navButtons[key].addEventListener('click', () => {
+                switchView(key);
+                if (window.innerWidth < 768) { 
+                    closeMobileSidebar();
+                }
+            });
+        });
+
+        proyekElements.list.addEventListener('click', (e) => {
+            const deleteButton = e.target.closest('.delete-project-btn');
+            if (deleteButton) {
+                e.stopPropagation();
+                const projectId = deleteButton.dataset.id;
+                const projectName = deleteButton.dataset.name;
+                showConfirmationModal(
+                    `Hapus Proyek`,
+                    `Apakah Anda yakin ingin menghapus proyek "${projectName}"? Semua data transaksi, kontrak, dan pembayaran yang terkait juga akan dihapus secara permanen.`,
+                    () => handleDeleteProject(projectId)
+                );
+            }
+        });
+        
+        dashboardElements.kavlingList.addEventListener('click', e => {
+            const deleteBtn = e.target.closest('.delete-kavling-btn');
+            if (deleteBtn) {
+                const kavlingName = deleteBtn.dataset.name;
+                showConfirmationModal(
+                    'Hapus Kavling?',
+                    `Anda yakin ingin menghapus kavling "${kavlingName}"? Semua data transaksi dan upah yang terkait dengan kavling ini akan dihapus secara permanen.`,
+                    () => handleDeleteKavling(kavlingName)
+                );
+            }
+        });
+        
+        function handleDeleteMaterial(materialId) {
+            if (!materialId) return;
+
+            materials = materials.filter(m => m.id !== materialId);
+            // Also remove related transactions to avoid data inconsistencies
+            transactions = transactions.filter(t => t.materialId !== materialId);
+            
+            saveDataToLocalStorage();
+            renderMaterials();
+            updateUIForNewState();
+            showModal('Berhasil', 'Material dan data transaksi terkait telah dihapus.');
+        }
+
+        function handleDeleteWage(id, type) {
+            if (!id || !type) return;
+            
+            if (type === 'weekly') {
+                weeklyWages = weeklyWages.filter(w => w.id !== id);
+            } else if (type === 'addendum') {
+                addendums = addendums.filter(a => a.id !== id);
+                addendumPayments = addendumPayments.filter(p => p.addendumId !== id);
+            } else if (type === 'subkontContract') {
+                subkontContracts = subkontContracts.filter(sc => sc.id !== id);
+                subkontPayments = subkontPayments.filter(p => p.subkontContractId !== id);
+            } else if (type === 'addendumPayment') {
+                addendumPayments = addendumPayments.filter(p => p.id !== id);
+            } else if (type === 'subkontPayment') {
+                subkontPayments = subkontPayments.filter(p => p.id !== id);
+            }
+            
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', 'Data telah berhasil dihapus.');
+        }
+
+        function handleDeleteKavling(kavlingName) {
+            if (!selectedProject || !kavlingName) return;
+
+            const projectIndex = projects.findIndex(p => p.id === selectedProject.id);
+            if (projectIndex === -1) return;
+
+            // Remove kavling from project
+            projects[projectIndex].kavling = projects[projectIndex].kavling.filter(k => k.name !== kavlingName);
+
+            // Filter out all related data
+            transactions = transactions.filter(t => !(t.projectId === selectedProject.id && t.kavling === kavlingName));
+            weeklyWages = weeklyWages.filter(w => !(w.projectId === selectedProject.id && w.kavlingName === kavlingName));
+            addendums = addendums.filter(a => !(a.projectId === selectedProject.id && a.kavlingName === kavlingName));
+            addendumPayments = addendumPayments.filter(p => !(p.projectId === selectedProject.id && p.kavlingName === kavlingName));
+            subkontContracts = subkontContracts.filter(sc => !(sc.projectId === selectedProject.id && sc.kavlingName === kavlingName));
+            subkontPayments = subkontPayments.filter(sp => !(sp.projectId === selectedProject.id && sp.kavlingName === kavlingName));
+            
+            saveDataToLocalStorage();
+            updateUIForNewState();
+            showModal('Berhasil', `Kavling "${kavlingName}" dan semua data terkait telah berhasil dihapus.`);
+        }
+
+        function handleDeleteProject(projectId) {
+            if (!projectId) return;
+
+            if (selectedProject && selectedProject.id === projectId) {
+                exitProjectBtn.click(); 
+            }
+
+            projects = projects.filter(p => p.id !== projectId);
+            transactions = transactions.filter(t => t.projectId !== projectId);
+            weeklyWages = weeklyWages.filter(w => w.projectId !== projectId);
+            subkontContracts = subkontContracts.filter(sc => sc.projectId !== projectId);
+            subkontPayments = subkontPayments.filter(sp => sp.projectId !== projectId);
+            addendums = addendums.filter(a => a.projectId !== projectId);
+            addendumPayments = addendumPayments.filter(p => p.projectId !== projectId);
+
+            saveDataToLocalStorage();
+            renderProjects();
+            showModal('Berhasil', 'Proyek dan semua data terkait telah berhasil dihapus.');
+        }
+
+
+        proyekElements.addBtn.addEventListener('click', () => {
+            const name = proyekElements.nameInput.value.trim();
+            if (!name) return showModal('Input Tidak Lengkap', 'Mohon isi nama proyek.');
+
+            projects.push({
+                id: crypto.randomUUID(),
+                name,
+                kavling: [],
+                createdAt: new Date().toISOString()
+            });
+            
+            saveDataToLocalStorage();
+            renderProjects();
+            showModal('Berhasil', 'Proyek baru berhasil ditambahkan.');
+            proyekElements.nameInput.value = '';
+        });
+
+        dashboardElements.addKavlingBtn.addEventListener('click', () => {
+            if (!selectedProject) return showModal('Gagal', 'Pilih proyek terlebih dahulu.');
+            
+            const newKavlingName = dashboardElements.newKavlingName.value.trim();
+            const newKavlingMandor = dashboardElements.newKavlingMandor.value.trim();
+            const newKavlingPelaksana = dashboardElements.newKavlingPelaksana.value.trim();
+            
+            if (!newKavlingName || !newKavlingMandor || !newKavlingPelaksana) {
+                return showModal('Input Tidak Lengkap', 'Mohon isi nama kavling, mandor, dan pelaksana.');
+            }
+
+            const projectIndex = projects.findIndex(p => p.id === selectedProject.id);
+            if (projectIndex === -1) return showModal('Error', 'Proyek tidak ditemukan.');
+
+            if (projects[projectIndex].kavling.some(k => k.name === newKavlingName)) {
+                return showModal('Gagal', 'Nama kavling sudah ada.');
+            }
+
+            const newKavlingObject = {
+                name: newKavlingName,
+                mandor: newKavlingMandor,
+                pelaksana: newKavlingPelaksana,
+                nilaiKontrak: 0,
+            };
+            
+            projects[projectIndex].kavling.push(newKavlingObject);
+            
+            saveDataToLocalStorage();
+            updateUIForNewState();
+            dashboardElements.newKavlingName.value = '';
+            dashboardElements.newKavlingMandor.value = '';
+            dashboardElements.newKavlingPelaksana.value = '';
+            showModal('Berhasil', 'Kavling berhasil ditambahkan.');
+        });
+
+        gudangElements.addMaterialBtn.addEventListener('click', () => {
+            const name = gudangElements.newMaterialName.value.trim();
+            const stock = parseInt(gudangElements.newMaterialStock.value, 10);
+            if (!name || isNaN(stock) || stock < 0) return showModal('Input Tidak Lengkap', 'Mohon isi semua data material dengan benar.');
+            
+            materials.push({
+                id: crypto.randomUUID(),
+                name,
+                stock,
+                createdAt: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            renderMaterials();
+            if (selectedProject) updateUIForNewState();
+            showModal('Berhasil', 'Material baru berhasil ditambahkan.');
+            gudangElements.newMaterialName.value = '';
+            gudangElements.newMaterialStock.value = '';
+        });
+
+        distribusiElements.distributeBtn.addEventListener('click', () => {
+            const materialId = distribusiElements.materialSelect.value;
+            const kavlingName = distribusiElements.kavlingSelect.value;
+            const quantity = parseInt(distribusiElements.quantityInput.value, 10);
+            const unitPrice = parseFloat(distribusiElements.priceInput.value);
+            const distributionDate = distribusiElements.dateInput.value;
+
+            if (!materialId || !kavlingName || !distributionDate || isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+                return showModal('Input Tidak Valid', 'Mohon lengkapi semua kolom: material, kavling, tanggal, jumlah & harga.');
+            }
+
+            const materialIndex = materials.findIndex(m => m.id === materialId);
+            if (materialIndex === -1) return showModal('Error', 'Material tidak ditemukan.');
+            
+            if (materials[materialIndex].stock < quantity) return showModal('Error', 'Stok tidak mencukupi untuk distribusi.');
+            
+            materials[materialIndex].stock -= quantity;
+            
+            transactions.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id, 
+                kavling: kavlingName, 
+                materialId, 
+                quantity, 
+                unitPrice,
+                distributionDate,
+                type: 'distribusi', 
+                timestamp: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            updateUIForNewState();
+            showModal('Berhasil', `Distribusi berhasil dicatat.`);
+            distribusiElements.quantityInput.value = '';
+            distribusiElements.priceInput.value = '';
+            distribusiElements.dateInput.value = '';
+            distribusiElements.materialSelect.value = '';
+            distribusiElements.kavlingSelect.value = '';
+        });
+        
+        distribusiElements.directDistributeBtn.addEventListener('click', () => {
+            const materialName = distribusiElements.directMaterialName.value.trim();
+            const kavlingName = distribusiElements.directKavlingSelect.value;
+            const quantity = parseInt(distribusiElements.directQuantityInput.value, 10);
+            const unitPrice = parseFloat(distribusiElements.directPriceInput.value);
+            const distributionDate = distribusiElements.directDateInput.value;
+
+            if (!materialName || !kavlingName || !distributionDate || isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+                return showModal('Input Tidak Valid', 'Mohon lengkapi semua kolom: nama material, kavling, tanggal, jumlah & harga.');
+            }
+
+            transactions.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id, 
+                kavling: kavlingName, 
+                materialName, 
+                quantity, 
+                unitPrice,
+                distributionDate,
+                type: 'distribusi-langsung', 
+                timestamp: new Date().toISOString()
+            });
+            
+            saveDataToLocalStorage();
+            showModal('Berhasil', 'Distribusi langsung berhasil dicatat.');
+            distribusiElements.directMaterialName.value = '';
+            distribusiElements.directQuantityInput.value = '';
+            distribusiElements.directPriceInput.value = '';
+            distribusiElements.directDateInput.value = '';
+            distribusiElements.directKavlingSelect.value = '';
+        });
+
+        kembaliElements.kavlingSelect.addEventListener('change', (e) => {
+            const kavlingName = e.target.value;
+            const select = kembaliElements.materialSelect;
+            if (!kavlingName) {
+                select.innerHTML = '<option value="" disabled selected>Pilih kavling dulu</option>';
+                select.disabled = true;
+                return;
+            }
+            
+            const projectTransactions = transactions.filter(tx => tx.projectId === selectedProject.id && tx.kavling === kavlingName);
+            const returnableItems = {};
+
+            projectTransactions.forEach(tx => {
+                if (tx.type === 'distribusi' || tx.type === 'distribusi-langsung') {
+                    const materialName = tx.materialName || materials.find(m => m.id === tx.materialId)?.name;
+                    if (materialName) {
+                        if (!returnableItems[materialName]) {
+                             returnableItems[materialName] = { name: materialName };
+                        }
+                    }
+                }
+            });
+
+            select.innerHTML = '<option value="" disabled selected>Pilih Material</option>';
+            Object.values(returnableItems).forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.name;
+                option.textContent = item.name;
+                select.appendChild(option);
+            });
+            select.disabled = false;
+        });
+
+        kembaliElements.returnBtn.addEventListener('click', () => {
+            const kavlingName = kembaliElements.kavlingSelect.value;
+            const materialName = kembaliElements.materialSelect.value;
+            const quantity = parseInt(kembaliElements.quantityInput.value, 10);
+
+            if (!materialName || !kavlingName || isNaN(quantity) || quantity <= 0) {
+                return showModal('Input Tidak Valid', 'Mohon pilih kavling, material, dan masukkan jumlah yang valid.');
+            }
+            
+            let materialIndex = materials.findIndex(m => m.name === materialName);
+
+            if (materialIndex === -1) {
+                materials.push({
+                    id: crypto.randomUUID(),
+                    name: materialName,
+                    stock: quantity,
+                    createdAt: new Date().toISOString()
+                });
+                showModal('Info', `Material baru "${materialName}" telah dibuat di gudang.`);
+            } else {
+                materials[materialIndex].stock += quantity;
+            }
+            
+            transactions.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id, 
+                kavling: kavlingName, 
+                materialName: materialName,
+                quantity: quantity, 
+                type: 'pengembalian', 
+                timestamp: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            updateUIForNewState();
+            showModal('Berhasil', `Pengembalian ${quantity} unit ${materialName} berhasil.`);
+            kembaliElements.quantityInput.value = '';
+            kembaliElements.kavlingSelect.dispatchEvent(new Event('change'));
+        });
+        
+        upahElements.contractKavlingSelect.addEventListener('change', (e) => {
+            const kavlingName = e.target.value;
+            if (!kavlingName || !selectedProject || !selectedProject.kavling) {
+                upahElements.contractValueInput.value = '';
+                return;
+            }
+            const kavlingData = selectedProject.kavling.find(k => k.name === kavlingName);
+            if (kavlingData && kavlingData.nilaiKontrak) {
+                upahElements.contractValueInput.value = kavlingData.nilaiKontrak;
+            } else {
+                upahElements.contractValueInput.value = '';
+            }
+        });
+
+        upahElements.saveContractValueBtn.addEventListener('click', () => {
+            const kavlingName = upahElements.contractKavlingSelect.value;
+            const contractValue = parseFloat(upahElements.contractValueInput.value);
+
+            if (!kavlingName || isNaN(contractValue) || contractValue < 0) {
+                return showModal('Input Tidak Valid', 'Mohon pilih kavling dan masukkan nilai kontrak yang valid.');
+            }
+            if (!selectedProject) return showModal('Error', 'Proyek tidak dipilih.');
+
+            const projectIndex = projects.findIndex(p => p.id === selectedProject.id);
+            if (projectIndex === -1) return showModal('Error', 'Proyek tidak ditemukan.');
+            
+            const kavlingIndex = projects[projectIndex].kavling.findIndex(k => k.name === kavlingName);
+            if (kavlingIndex === -1) return showModal('Error', 'Kavling tidak ditemukan.');
+
+            projects[projectIndex].kavling[kavlingIndex].nilaiKontrak = contractValue;
+
+            saveDataToLocalStorage();
+            updateUIForNewState();
+            showModal('Berhasil', `Nilai kontrak untuk kavling ${kavlingName} berhasil disimpan.`);
+        });
+        
+        upahElements.addWeeklyWageBtn.addEventListener('click', () => {
+            const kavlingName = upahElements.weeklyWageKavlingSelect.value;
+            const weekNumber = parseInt(upahElements.weeklyWageWeekInput.value, 10);
+            const description = upahElements.weeklyWageDescInput.value.trim();
+            const amount = parseFloat(upahElements.weeklyWageAmountInput.value);
+            const paymentDate = upahElements.weeklyWageDateInput.value;
+
+            if (!kavlingName || isNaN(weekNumber) || weekNumber <= 0 || isNaN(amount) || amount <= 0 || !paymentDate) {
+                return showModal('Input Tidak Valid', 'Mohon isi semua kolom untuk mencatat upah mingguan.');
+            }
+
+            weeklyWages.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id,
+                kavlingName: kavlingName,
+                weekNumber: weekNumber,
+                description: description,
+                amount: amount,
+                paymentDate: paymentDate,
+                createdAt: new Date().toISOString()
+            });
+            
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', `Pembayaran upah untuk kavling ${kavlingName} berhasil dicatat.`);
+            upahElements.weeklyWageWeekInput.value = '';
+            upahElements.weeklyWageDescInput.value = '';
+            upahElements.weeklyWageAmountInput.value = '';
+            upahElements.weeklyWageDateInput.value = '';
+        });
+
+        upahElements.addAddendumBtn.addEventListener('click', () => {
+            const kavlingName = upahElements.addendumKavlingSelect.value;
+            const description = upahElements.addendumDescInput.value.trim();
+            const amount = parseFloat(upahElements.addendumAmountInput.value);
+            const date = upahElements.addendumDateInput.value;
+
+            if (!kavlingName || !description || isNaN(amount) || amount <= 0 || !date) {
+                return showModal('Input Tidak Valid', 'Mohon isi semua kolom untuk menambah item addendum.');
+            }
+
+            addendums.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id,
+                kavlingName: kavlingName,
+                description: description,
+                amount: amount, // This is the total cost of the item
+                date: date,
+                createdAt: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', `Item addendum untuk kavling ${kavlingName} berhasil dicatat.`);
+            upahElements.addendumDescInput.value = '';
+            upahElements.addendumAmountInput.value = '';
+            upahElements.addendumDateInput.value = '';
+        });
+        
+        upahElements.addendumPaymentKavlingSelect.addEventListener('change', (e) => {
+            const kavlingName = e.target.value;
+            const select = upahElements.addendumPaymentItemSelect;
+            if (!kavlingName) {
+                select.innerHTML = '<option value="" disabled selected>Pilih kavling dulu</option>';
+                select.disabled = true;
+                return;
+            }
+            const items = addendums.filter(a => a.projectId === selectedProject.id && a.kavlingName === kavlingName);
+            if(items.length === 0) {
+                 select.innerHTML = '<option value="" disabled selected>Tidak ada item addendum</option>';
+                 select.disabled = true;
+                 return;
+            }
+            select.innerHTML = '<option value="" disabled selected>Pilih Item Pekerjaan</option>';
+            items.forEach(item => {
+                select.innerHTML += `<option value="${item.id}">${item.description} (${formatCurrency(item.amount)})</option>`;
+            });
+            select.disabled = false;
+        });
+
+        upahElements.addAddendumPaymentBtn.addEventListener('click', () => {
+            const kavlingName = upahElements.addendumPaymentKavlingSelect.value;
+            const addendumId = upahElements.addendumPaymentItemSelect.value;
+            const description = upahElements.addendumPaymentDescInput.value.trim();
+            const amount = parseFloat(upahElements.addendumPaymentAmountInput.value);
+            const paymentDate = upahElements.addendumPaymentDateInput.value;
+
+            if (!kavlingName || !addendumId || isNaN(amount) || amount <= 0 || !paymentDate) {
+                return showModal('Input Tidak Valid', 'Mohon pilih kavling, item pekerjaan, dan isi jumlah pembayaran serta tanggal.');
+            }
+
+            addendumPayments.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id,
+                kavlingName: kavlingName,
+                addendumId: addendumId,
+                description: description,
+                amount: amount,
+                paymentDate: paymentDate,
+                createdAt: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', `Pembayaran addendum berhasil dicatat.`);
+            upahElements.addendumPaymentDescInput.value = '';
+            upahElements.addendumPaymentAmountInput.value = '';
+            upahElements.addendumPaymentDateInput.value = '';
+            upahElements.addendumPaymentItemSelect.value = '';
+        });
+
+        upahElements.saveSubkontContractBtn.addEventListener('click', () => {
+            const kavlingName = upahElements.subkontContractKavlingSelect.value;
+            const description = upahElements.subkontContractDescInput.value.trim();
+            const amount = parseFloat(upahElements.subkontContractValueInput.value);
+            const date = upahElements.subkontContractDateInput.value;
+
+             if (!kavlingName || !description || isNaN(amount) || amount <= 0 || !date) {
+                return showModal('Input Tidak Valid', 'Mohon isi semua kolom untuk menambah item subkontraktor.');
+            }
+            
+            subkontContracts.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id,
+                kavlingName: kavlingName,
+                description: description,
+                amount: amount,
+                date: date,
+                createdAt: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', `Item pekerjaan subkontraktor berhasil disimpan.`);
+            upahElements.subkontContractDescInput.value = '';
+            upahElements.subkontContractValueInput.value = '';
+            upahElements.subkontContractDateInput.value = '';
+        });
+
+        upahElements.subkontPaymentKavlingSelect.addEventListener('change', (e) => {
+             const kavlingName = e.target.value;
+            const select = upahElements.subkontPaymentItemSelect;
+            if (!kavlingName) {
+                select.innerHTML = '<option value="" disabled selected>Pilih kavling dulu</option>';
+                select.disabled = true;
+                return;
+            }
+            const items = subkontContracts.filter(sc => sc.projectId === selectedProject.id && sc.kavlingName === kavlingName);
+            if(items.length === 0) {
+                 select.innerHTML = '<option value="" disabled selected>Tidak ada item subkont</option>';
+                 select.disabled = true;
+                 return;
+            }
+            select.innerHTML = '<option value="" disabled selected>Pilih Item Pekerjaan</option>';
+            items.forEach(item => {
+                select.innerHTML += `<option value="${item.id}">${item.description} (${formatCurrency(item.amount)})</option>`;
+            });
+            select.disabled = false;
+        });
+
+        upahElements.addSubkontPaymentBtn.addEventListener('click', () => {
+            const kavlingName = upahElements.subkontPaymentKavlingSelect.value;
+            const subkontContractId = upahElements.subkontPaymentItemSelect.value;
+            const description = upahElements.subkontPaymentDescInput.value.trim();
+            const amount = parseFloat(upahElements.subkontPaymentAmountInput.value);
+            const paymentDate = upahElements.subkontPaymentDateInput.value;
+
+            if (!kavlingName || !subkontContractId || !description || isNaN(amount) || amount <= 0 || !paymentDate) {
+                return showModal('Input Tidak Valid', 'Mohon isi semua kolom untuk mencatat pembayaran subkont.');
+            }
+
+            subkontPayments.push({
+                id: crypto.randomUUID(),
+                projectId: selectedProject.id,
+                kavlingName: kavlingName,
+                subkontContractId: subkontContractId,
+                description: description,
+                amount: amount,
+                paymentDate: paymentDate,
+                createdAt: new Date().toISOString()
+            });
+
+            saveDataToLocalStorage();
+            renderWageSummary();
+            showModal('Berhasil', `Pembayaran subkontraktor berhasil dicatat.`);
+            upahElements.subkontPaymentDescInput.value = '';
+            upahElements.subkontPaymentAmountInput.value = '';
+            upahElements.subkontPaymentDateInput.value = '';
+            upahElements.subkontPaymentItemSelect.value = '';
+        });
+        
+        
+        laporanElements.kavlingSelect.addEventListener('change', (e) => {
+            const selection = e.target.value.replace('Laporan Kavling ', '');
+            if (!selection) {
+                laporanElements.detailsContainer.classList.add('hidden');
+                return;
+            }
+
+            laporanElements.reportTitle.textContent = e.target.options[e.target.selectedIndex].text;
+            
+            const materialTransactions = selection === 'all'
+                ? transactions.filter(tx => tx.projectId === selectedProject.id && (tx.type === 'distribusi' || tx.type === 'distribusi-langsung' || tx.type === 'pengembalian'))
+                : transactions.filter(tx => tx.projectId === selectedProject.id && tx.kavling === selection && (tx.type === 'distribusi' || tx.type === 'distribusi-langsung' || tx.type === 'pengembalian'));
+            
+            const materialCostData = new Map();
+            materialTransactions.forEach(tx => {
+                const materialName = tx.materialName || materials.find(m => m.id === tx.materialId)?.name;
+                if (!materialName) return;
+
+                if (!materialCostData.has(materialName)) {
+                    materialCostData.set(materialName, { distributions: [], returns: [] });
+                }
+                const entry = materialCostData.get(materialName);
+                if (tx.type === 'distribusi' || tx.type === 'distribusi-langsung') {
+                    entry.distributions.push({ quantity: tx.quantity, unitPrice: tx.unitPrice });
+                } else if (tx.type === 'pengembalian') {
+                    entry.returns.push({ quantity: tx.quantity });
+                }
+            });
+
+            let totalMaterialCost = 0;
+            let reportRowsHtml = '';
+            for (const [name, data] of materialCostData.entries()) {
+                const totalDistributed = data.distributions.reduce((sum, d) => sum + d.quantity, 0);
+                const totalReturned = data.returns.reduce((sum, r) => sum + r.quantity, 0);
+                const netQuantity = totalDistributed - totalReturned;
+                if (netQuantity <= 0) continue;
+
+                const totalCost = data.distributions.reduce((sum, d) => sum + (d.quantity * (d.unitPrice || 0)), 0);
+                const avgPrice = totalDistributed > 0 ? totalCost / totalDistributed : 0;
+                const finalCost = netQuantity * avgPrice;
+                totalMaterialCost += finalCost;
+
+                reportRowsHtml += `
+                    <tr class="border-b border-slate-700 hover:bg-slate-700/50">
+                        <td class="py-3 px-4 text-sm text-slate-300">${name}</td>
+                        <td class="py-3 px-4 text-sm text-slate-300">${netQuantity.toLocaleString('id-ID')}</td>
+                        <td class="py-3 px-4 text-sm text-slate-300">${formatCurrency(avgPrice)}</td>
+                        <td class="py-3 px-4 text-sm text-slate-200 font-semibold">${formatCurrency(finalCost)}</td>
+                    </tr>
+                `;
+            }
+
+            laporanElements.reportBody.innerHTML = reportRowsHtml || '<tr><td colspan="4" class="text-center italic p-4">Tidak ada data material untuk ditampilkan.</td></tr>';
+
+            const relevantWeeklyWages = selection === 'all' ? weeklyWages.filter(w => w.projectId === selectedProject.id) : weeklyWages.filter(w => w.projectId === selectedProject.id && w.kavlingName === selection);
+            const relevantSubkontPayments = selection === 'all' ? subkontPayments.filter(w => w.projectId === selectedProject.id) : subkontPayments.filter(w => w.projectId === selectedProject.id && w.kavlingName === selection);
+            const relevantAddendumPayments = selection === 'all' ? addendumPayments.filter(p => p.projectId === selectedProject.id) : addendumPayments.filter(p => p.projectId === selectedProject.id && p.kavlingName === selection);
+
+            const totalWeeklyUpahCost = relevantWeeklyWages.reduce((sum, doc) => sum + doc.amount, 0);
+            const totalSubkontCost = relevantSubkontPayments.reduce((sum, doc) => sum + doc.amount, 0);
+            const totalAddendumCost = relevantAddendumPayments.reduce((sum, p) => sum + p.amount, 0);
+            const totalUpahCost = totalWeeklyUpahCost + totalSubkontCost + totalAddendumCost;
+
+            laporanElements.reportTotalMaterialCost.textContent = formatCurrency(totalMaterialCost);
+            laporanElements.reportTotalUpahCost.textContent = formatCurrency(totalUpahCost);
+            laporanElements.reportGrandTotalCost.textContent = formatCurrency(totalMaterialCost + totalUpahCost);
+            
+            laporanElements.detailsContainer.classList.remove('hidden');
+        });
+        
+        laporanElements.downloadCsvBtn.addEventListener('click', () => {
+            const selectElement = laporanElements.kavlingSelect;
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            const selectedValue = selectedOption.value.replace('Laporan Kavling ', '');
+
+            if (!selectedValue) return;
+
+            const fileNamePart = selectedValue === 'all' 
+                ? `Laporan_Proyek_Total_${selectedProject.name.replace(/\s+/g, '_')}` 
+                : `Laporan_Kavling_${selectedValue.replace(/\s+/g, '_')}`;
+            const fileName = `${fileNamePart}_${new Date().toISOString().slice(0,10)}.csv`;
+
+            const table = document.getElementById('report-table');
+            let csv = [];
+            
+            csv.push(`"Laporan:","${selectedOption.text}"`);
+            csv.push(`"Nama Proyek:","${selectedProject.name}"`);
+            if (selectedValue !== 'all') {
+                const kavlingData = selectedProject.kavling.find(k => k.name === selectedValue);
+                if (kavlingData) {
+                    csv.push(`"Mandor:","${kavlingData.mandor}"`);
+                    csv.push(`"Pelaksana:","${kavlingData.pelaksana}"`);
+                }
+            }
+            csv.push(""); 
+
+            let rows = table.querySelectorAll("tr");
+            
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) 
+                    row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+                csv.push(row.join(","));        
+            }
+
+            const csvFile = new Blob(["\uFEFF" + csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+            const downloadLink = document.createElement("a");
+            downloadLink.download = fileName;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        });
+        
+        function downloadMaterialRekapPdf() {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) { return showModal('Error', 'Gagal memuat pustaka PDF.'); }
+            const doc = new jsPDF();
+
+            const selectElement = laporanElements.kavlingSelect;
+            const selectedValue = selectElement.value.replace('Laporan Kavling ', '');
+            if (!selectedValue) return;
+
+            const title = laporanElements.reportTitle.textContent;
+            
+            const fileNamePart = selectedValue === 'all' 
+                ? `Laporan_Rekap_Total_${selectedProject.name.replace(/\s+/g, '_')}` 
+                : `Laporan_Rekap_Kavling_${selectedValue.replace(/\s+/g, '_')}`;
+            const fileName = `${fileNamePart}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+            doc.text(title, 14, 16);
+            
+            let startY = 22;
+            doc.setFontSize(10);
+            doc.text(`Nama Proyek: ${selectedProject.name}`, 14, startY);
+            
+            if (selectedValue !== 'all') {
+                 const kavlingData = selectedProject.kavling.find(k => k.name === selectedValue);
+                if (kavlingData) {
+                    startY += 5;
+                    doc.text(`Mandor: ${kavlingData.mandor}`, 14, startY);
+                    doc.text(`Pelaksana: ${kavlingData.pelaksana}`, 100, startY);
+                }
+            }
+            
+            startY += 8;
+
+            const table = document.getElementById('report-table');
+            doc.autoTable({
+                html: '#report-table',
+                startY: startY,
+                theme: 'grid',
+                didDrawPage: function (data) {
+                    let str = "Dicetak pada: " + new Date().toLocaleString('id-ID');
+                    doc.setFontSize(8);
+                    doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 6);
+                }
+            });
+
+            doc.save(fileName);
+        }
+
+        function downloadMaterialRincianPdf() {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) { return showModal('Error', 'Gagal memuat pustaka PDF.'); }
+            const doc = new jsPDF();
+            
+            const selectElement = laporanElements.kavlingSelect;
+            const selectedValue = selectElement.value.replace('Laporan Kavling ', '');
+            if (!selectedValue) return;
+
+            const title = `Laporan Rincian Material - ${selectElement.options[selectElement.selectedIndex].text}`;
+            const fileNamePart = selectedValue === 'all' 
+                ? `Laporan_Rincian_Total_${selectedProject.name.replace(/\s+/g, '_')}` 
+                : `Laporan_Rincian_Kavling_${selectedValue.replace(/\s+/g, '_')}`;
+            const fileName = `${fileNamePart}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+            doc.text(title, 14, 16);
+            let startY = 22;
+            doc.setFontSize(10);
+            doc.text(`Nama Proyek: ${selectedProject.name}`, 14, startY);
+             if (selectedValue !== 'all') {
+                 const kavlingData = selectedProject.kavling.find(k => k.name === selectedValue);
+                if (kavlingData) {
+                    startY += 5;
+                    doc.text(`Mandor: ${kavlingData.mandor} | Pelaksana: ${kavlingData.pelaksana}`, 14, startY);
+                }
+            }
+            startY += 8;
+
+            const projectTransactions = transactions.filter(tx => tx.projectId === selectedProject.id && (selectedValue === 'all' || tx.kavling === selectedValue));
+            projectTransactions.sort((a,b) => new Date(a.distributionDate || a.timestamp) - new Date(b.distributionDate || b.timestamp));
+
+            const head = [['Tanggal', 'Nama Material', 'Tipe', 'Jumlah', 'Harga Satuan', 'Total Biaya']];
+            let grandTotal = 0;
+            const body = projectTransactions.map(tx => {
+                const date = tx.distributionDate || tx.timestamp.slice(0, 10);
+                const materialName = tx.materialName || materials.find(m => m.id === tx.materialId)?.name || 'N/A';
+                const type = tx.type === 'pengembalian' ? 'Masuk' : 'Keluar';
+                const quantity = tx.quantity;
+                const unitPrice = tx.unitPrice || 0;
+                const total = tx.type === 'pengembalian' ? 0 : quantity * unitPrice;
+                if (type === 'Keluar') {
+                    grandTotal += total;
+                }
+                return [date, materialName, type, quantity, formatCurrency(unitPrice), formatCurrency(total)];
+            });
+
+            doc.autoTable({
+                head: head,
+                body: body,
+                startY: startY,
+                theme: 'grid',
+                foot: [['', '', '', '', 'GRAND TOTAL', formatCurrency(grandTotal)]],
+                footStyles: { fillColor: [41, 56, 78], textColor: 255, fontStyle: 'bold'},
+                didDrawPage: function (data) {
+                    let str = "Dicetak pada: " + new Date().toLocaleString('id-ID');
+                    doc.setFontSize(8);
+                    doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 6);
+                }
+            });
+
+            doc.save(fileName);
+        }
+
+        laporanElements.downloadPdfRekapBtn.addEventListener('click', downloadMaterialRekapPdf);
+        laporanElements.downloadPdfRincianBtn.addEventListener('click', downloadMaterialRincianPdf);
+
+        function downloadWageDetailCsv(kavlingName) {
+            if (!selectedProject || !kavlingName) return;
+
+            const kavlingData = selectedProject.kavling.find(k => k.name === kavlingName);
+            if (!kavlingData) return showModal('Error', 'Data kavling tidak ditemukan.');
+            
+            let csv = [];
+            const fileName = `Laporan_Upah_Kavling_${kavlingName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.csv`;
+
+            csv.push(`"Laporan Detail Upah"`);
+            csv.push(`"Proyek:","${selectedProject.name}"`);
+            csv.push(`"Kavling:","${kavlingName}"`);
+            csv.push(`"Mandor:","${kavlingData.mandor}"`);
+            csv.push(`"Pelaksana:","${kavlingData.pelaksana}"`);
+            csv.push("");
+
+            // --- KONTRAK UTAMA ---
+            const weeklyPayments = weeklyWages.filter(w => w.projectId === selectedProject.id && w.kavlingName === kavlingName).sort((a,b) => a.weekNumber - b.weekNumber);
+            const totalWeeklyPaid = weeklyPayments.reduce((sum, p) => sum + p.amount, 0);
+            const initialContractValue = kavlingData.nilaiKontrak || 0;
+            csv.push(`"--- 1. UPah Kerja Pembangunan ---"`);
+            csv.push(`"Nilai Kontrak:","${formatCurrency(initialContractValue)}"`);
+            csv.push(`"Total Terserap:","${formatCurrency(totalWeeklyPaid)}"`);
+            csv.push(`"Sisa Kontrak:","${formatCurrency(initialContractValue - totalWeeklyPaid)}"`);
+            csv.push(`"Minggu","Tanggal","Keterangan","Jumlah"`);
+            weeklyPayments.forEach(p => csv.push(`"${p.weekNumber}","${p.paymentDate}","${p.description || '-'}","${formatCurrency(p.amount)}"`));
+            csv.push("");
+            
+            // --- ADDENDUM ---
+            const addendumItems = addendums.filter(a => a.projectId === selectedProject.id && a.kavlingName === kavlingName);
+            csv.push(`"--- 2. Addendum Pekerjaan ---"`);
+            csv.push(`"Item Pekerjaan","Total Biaya","Terserap","Sisa"`);
+            addendumItems.forEach(item => {
+                const payments = addendumPayments.filter(p => p.addendumId === item.id);
+                const terserap = payments.reduce((sum, p) => sum + p.amount, 0);
+                csv.push(`"${item.description}","${formatCurrency(item.amount)}","${formatCurrency(terserap)}","${formatCurrency(item.amount - terserap)}"`);
+            });
+            csv.push("");
+            
+            // --- SUBKONT ---
+            const subkontItems = subkontContracts.filter(sc => sc.projectId === selectedProject.id && sc.kavlingName === kavlingName);
+            csv.push(`"--- 3. Pekerjaan Subkontraktor ---"`);
+            csv.push(`"Item Pekerjaan","Total Biaya","Terserap","Sisa"`);
+            subkontItems.forEach(item => {
+                const payments = subkontPayments.filter(p => p.subkontContractId === item.id);
+                const terserap = payments.reduce((sum, p) => sum + p.amount, 0);
+                csv.push(`"${item.description}","${formatCurrency(item.amount)}","${formatCurrency(terserap)}","${formatCurrency(item.amount - terserap)}"`);
+            });
+
+            const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const downloadLink = document.createElement("a");
+            downloadLink.download = fileName;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        function downloadWageDetailPdf(kavlingName) {
+            if (!selectedProject || !kavlingName) return;
+             const { jsPDF } = window.jspdf;
+            if (!jsPDF) { return showModal('Error', 'Gagal memuat pustaka PDF.'); }
+            const doc = new jsPDF();
+            
+            const kavlingData = selectedProject.kavling.find(k => k.name === kavlingName);
+            if (!kavlingData) return showModal('Error', 'Data kavling tidak ditemukan.');
+
+            const fileName = `Laporan_Upah_Kavling_${kavlingName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+            
+            let startY = 15;
+            doc.setFontSize(16);
+            doc.text(`Laporan Detail Upah Kavling ${kavlingName}`, 14, startY);
+            startY += 8;
+            doc.setFontSize(10);
+            doc.text(`Proyek: ${selectedProject.name}`, 14, startY);
+            startY += 5;
+            doc.text(`Mandor: ${kavlingData.mandor} | Pelaksana: ${kavlingData.pelaksana}`, 14, startY);
+            startY += 8;
+
+            const checkPageBreak = (currentY) => {
+                if (currentY > 270) {
+                    doc.addPage();
+                    return 20;
+                }
+                return currentY;
+            };
+
+            // --- KONTRAK UTAMA ---
+            const weeklyPayments = weeklyWages.filter(w => w.projectId === selectedProject.id && w.kavlingName === kavlingName).sort((a,b) => a.weekNumber - b.weekNumber);
+            const totalWeeklyPaid = weeklyPayments.reduce((sum, p) => sum + p.amount, 0);
+            const initialContractValue = kavlingData.nilaiKontrak || 0;
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('1. Upah Kerja Pembangunan', 14, startY);
+            startY += 6;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text(`- Nilai Kontrak: ${formatCurrency(initialContractValue)}`, 16, startY);
+            startY += 5;
+            doc.text(`- Total Terserap: ${formatCurrency(totalWeeklyPaid)}`, 16, startY);
+            startY += 5;
+            doc.text(`- Sisa Kontrak: ${formatCurrency(initialContractValue - totalWeeklyPaid)}`, 16, startY);
+            startY += 7;
+            doc.autoTable({
+                head: [['Minggu', 'Tanggal', 'Keterangan', 'Jumlah']],
+                body: weeklyPayments.map(p => [p.weekNumber, p.paymentDate, p.description || '-', formatCurrency(p.amount)]),
+                startY: startY, theme: 'grid'
+            });
+            startY = doc.lastAutoTable.finalY + 10;
+            startY = checkPageBreak(startY);
+            
+            // --- ADDENDUM ---
+            const addendumItems = addendums.filter(a => a.projectId === selectedProject.id && a.kavlingName === kavlingName);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('2. Addendum Pekerjaan', 14, startY);
+            startY += 7;
+            addendumItems.forEach(item => {
+                startY = checkPageBreak(startY);
+                const payments = addendumPayments.filter(p => p.addendumId === item.id);
+                const terserap = payments.reduce((sum, p) => sum + p.amount, 0);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Item: ${item.description}`, 16, startY);
+                startY += 5;
+                doc.setFont(undefined, 'normal');
+                doc.text(`- Biaya: ${formatCurrency(item.amount)} | Terserap: ${formatCurrency(terserap)} | Sisa: ${formatCurrency(item.amount - terserap)}`, 18, startY);
+                startY += 6;
+                if(payments.length > 0) {
+                    doc.autoTable({
+                        head: [['Tanggal', 'Keterangan', 'Jumlah']],
+                        body: payments.map(p => [p.paymentDate, p.description || '-', formatCurrency(p.amount)]),
+                        startY: startY, theme: 'grid', headStyles: {fillColor: [220, 220, 220], textColor: 40}
+                    });
+                    startY = doc.lastAutoTable.finalY + 7;
+                } else {
+                    doc.text("   Belum ada pembayaran.", 18, startY);
+                    startY += 7;
+                }
+            });
+            startY = checkPageBreak(startY);
+
+             // --- SUBKONT ---
+            const subkontItems = subkontContracts.filter(sc => sc.projectId === selectedProject.id && sc.kavlingName === kavlingName);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('3. Pekerjaan Subkontraktor', 14, startY);
+            startY += 7;
+            subkontItems.forEach(item => {
+                startY = checkPageBreak(startY);
+                const payments = subkontPayments.filter(p => p.subkontContractId === item.id);
+                const terserap = payments.reduce((sum, p) => sum + p.amount, 0);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Item: ${item.description}`, 16, startY);
+                startY += 5;
+                doc.setFont(undefined, 'normal');
+                doc.text(`- Biaya: ${formatCurrency(item.amount)} | Terserap: ${formatCurrency(terserap)} | Sisa: ${formatCurrency(item.amount - terserap)}`, 18, startY);
+                startY += 6;
+                if(payments.length > 0) {
+                    doc.autoTable({
+                        head: [['Tanggal', 'Keterangan', 'Jumlah']],
+                        body: payments.map(p => [p.paymentDate, p.description || '-', formatCurrency(p.amount)]),
+                        startY: startY, theme: 'grid', headStyles: {fillColor: [220, 220, 220], textColor: 40}
+                    });
+                    startY = doc.lastAutoTable.finalY + 7;
+                } else {
+                     doc.text("   Belum ada pembayaran.", 18, startY);
+                    startY += 7;
+                }
+            });
+            doc.save(fileName);
+        }
+
+        // --- Wage Modal Logic ---
+        function setupWageModal() {
+            const modal = upahElements.addWageDataModal;
+            const openBtn = upahElements.openAddWageModalBtn;
+            const closeBtn = upahElements.closeWageModalBtn;
+            const tabContainer = modal.querySelector('.flex.space-x-1');
+
+            openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+            closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+            tabContainer.addEventListener('click', (e) => {
+                if(e.target.matches('.wage-tab-btn')) {
+                    const tabName = e.target.dataset.tab;
+                    modal.querySelectorAll('.wage-tab-btn').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    modal.querySelectorAll('.wage-tab-content').forEach(content => content.classList.add('hidden'));
+                    modal.querySelector(`#wage-tab-content-${tabName}`).classList.remove('hidden');
+                }
+            });
+        }
+        
+        editStockModal.saveBtn.addEventListener('click', () => {
+            const materialId = editStockModal.idInput.value;
+            const newStock = parseInt(editStockModal.amountInput.value, 10);
+
+            if (isNaN(newStock) || newStock < 0) {
+                return showModal('Input Tidak Valid', 'Mohon masukkan jumlah stok baru yang valid (angka non-negatif).');
+            }
+
+            const materialIndex = materials.findIndex(m => m.id === materialId);
+            if (materialIndex !== -1) {
+                materials[materialIndex].stock = newStock;
+                saveDataToLocalStorage();
+                renderMaterials();
+                updateUIForNewState();
+                editStockModal.container.classList.add('hidden');
+                showModal('Berhasil', 'Stok material telah berhasil diperbarui.');
+            } else {
+                showModal('Error', 'Material tidak ditemukan.');
+            }
+        });
+
+        editStockModal.cancelBtn.addEventListener('click', () => {
+            editStockModal.container.classList.add('hidden');
+        });
+        
+        function setInitialSidebarState() {
+            if (window.innerWidth < 768) {
+                sidebar.classList.add('is-collapsed');
+            }
+        }
+        
+        window.addEventListener('resize', setInitialSidebarState);
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+    </script>
+</body>
+</html>
+
+
